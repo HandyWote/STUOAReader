@@ -51,3 +51,9 @@ docker compose logs -f oap
 - **保留原作者信息**：对源码的修改、再分发或线上部署必须保留原作者及项目名称标识，包括但不限于 README 顶部的声明。
 - 如需商业合作或授权，请联系原作者获得书面许可。
 
+## AI 接口配置
+
+默认使用类 OpenAI Chat Completions 的接口格式，可通过 `env`/环境变量切换：
+- `AI_BASE_URL`：完整的 chat/completions 端点，例如 `https://api.openai.com/v1/chat/completions`。
+- `AI_MODEL`：模型名称。
+- `API_KEY`：接口 Key，自动加到 `Authorization: Bearer <KEY>`。
