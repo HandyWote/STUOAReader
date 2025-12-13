@@ -25,6 +25,11 @@ class Config:
         self.api_key: Optional[str] = None
         self.ai_base_url: str = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
         self.ai_model: str = "glm-4.5-flash"
+        self.database_url: Optional[str] = None
+        self.embed_base_url: Optional[str] = None
+        self.embed_model: Optional[str] = None
+        self.embed_api_key: Optional[str] = None
+        self.embed_dim: int = 1024
 
         self.load()
 
@@ -98,6 +103,11 @@ class Config:
             "API_KEY",
             "AI_BASE_URL",
             "AI_MODEL",
+            "DATABASE_URL",
+            "EMBED_BASE_URL",
+            "EMBED_MODEL",
+            "EMBED_API_KEY",
+            "EMBED_DIM",
         ]
         for key in keys:
             value = os.getenv(key)
@@ -131,6 +141,19 @@ class Config:
         elif key == "AI_MODEL":
             if value:
                 self.ai_model = value
+        elif key == "DATABASE_URL":
+            self.database_url = value or None
+        elif key == "EMBED_BASE_URL":
+            self.embed_base_url = value or None
+        elif key == "EMBED_MODEL":
+            self.embed_model = value or None
+        elif key == "EMBED_API_KEY":
+            self.embed_api_key = value or None
+        elif key == "EMBED_DIM":
+            try:
+                self.embed_dim = int(value)
+            except ValueError:
+                pass
 
 
 __all__ = ["Config"]
