@@ -1,23 +1,16 @@
 from __future__ import annotations
 
 import datetime
-import re
 import time
-from typing import Iterable, List
-
-import requests
+from typing import List
 
 from config.config import Config
-from crawler.db import (
-    ArticleRecord,
-    db_session,
-    fetch_article_ids,
-    fetch_existing_links,
-    init_db,
-    insert_articles,
-    insert_embeddings,
-)
+from crawler.embeddings import Embedder
 from crawler.fetcher import fetch_detail, fetch_list
+from crawler.models import ArticleRecord, ArticleMeta
+from crawler.storage import ArticleRepository
+from crawler.summarizer import Summarizer
+from crawler.db import db_session
 
 
 def _normalize_date(raw: str | None) -> str:
@@ -32,6 +25,9 @@ class Crawler:
     def __init__(self, target_date: str | None = None) -> None:
         self.config = Config()
         self.target_date = _normalize_date(target_date)
+        self.summarizer = Summarizer(self.config)
+        self.embedder = Embedder(self.config)
+        self.repo = ArticleRepository()
 
     def _within_hours(self) -> bool:
         now = datetime.datetime.now()
@@ -46,32 +42,32 @@ class Crawler:
 
         print(f"开始增量抓取 {self.target_date} 的OA通知")
         with db_session() as conn:
-            init_db(conn)
-            existing_links = fetch_existing_links(conn, self.target_date)
+            self.repo.ensure_schema(conn)
+            existing_links = self.repo.existing_links(conn, self.target_date)
             candidates = fetch_list(self.target_date)
             if not candidates:
                 print("未获取到当天列表，结束")
                 return
 
-            new_items = [item for item in candidates if item["链接"] not in existing_links]
+            new_items = [item for item in candidates if item.link not in existing_links]
             print(f"列表总计 {len(candidates)} 条，新增 {len(new_items)} 条")
             if not new_items:
                 return
 
             detailed: list[dict] = []
             for item in new_items:
-                content, attachments = fetch_detail(item["链接"])
-                if not content:
-                    print(f"跳过 {item['链接']}，未获取到正文")
+                detail = fetch_detail(item.link)
+                if not detail.content:
+                    print(f"跳过 {item.link}，未获取到正文")
                     continue
                 detailed.append(
                     {
-                        "标题": item["标题"],
-                        "发布单位": item["发布单位"],
-                        "链接": item["链接"],
-                        "发布日期": item["发布日期"],
-                        "正文": content,
-                        "附件": attachments,
+                        "标题": item.title,
+                        "发布单位": item.unit,
+                        "链接": item.link,
+                        "发布日期": item.published_on,
+                        "正文": detail.content,
+                        "附件": detail.attachments,
                     }
                 )
 
@@ -93,57 +89,17 @@ class Crawler:
                 )
                 for item in detailed
             ]
-            inserted = insert_articles(conn, records)
+            inserted = self.repo.insert_articles(conn, records)
             print(f"入库完成，新增 {inserted} 条")
 
             # fetch ids for embedding
             links = [item["链接"] for item in detailed]
-            articles = fetch_article_ids(conn, links)
+            articles = self.repo.fetch_for_embedding(conn, links)
             if not articles:
                 return
             self._generate_embeddings(conn, articles)
 
     # ------------------------------------------------------------------ AI
-    def _call_ai(self, content: str) -> str | None:
-        headers = dict(self.config.ai_headers)
-        if "Authorization" not in headers:
-            print("AI API_KEY 未配置，跳过摘要生成")
-            return "[AI 未配置]"
-
-        payload = {
-            "model": self.config.ai_model,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": (
-                        "你是一个专业的事件通知摘要生成器，擅长从各类通知公告中提取核心信息，生成客观、中立的简短摘要。"
-                        "仅总结通知中明确的信息，返回纯文本摘要。"
-                    ),
-                },
-                {"role": "user", "content": content},
-            ],
-            "stream": False,
-            "temperature": 0.7,
-            "max_tokens": 2000,
-        }
-
-        try:
-            resp = requests.post(self.config.ai_base_url, json=payload, headers=headers, timeout=60)
-            if resp.status_code != 200:
-                print(f"AI API返回错误状态码: {resp.status_code}")
-                return None
-            data = resp.json()
-            choices = data.get("choices") or []
-            if not choices:
-                return None
-            text = choices[-1]["message"].get("content", "").strip()
-            text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
-            text = text.lstrip("# ").lstrip()
-            return text
-        except requests.RequestException as exc:
-            print(f"调用AI失败: {exc}")
-            return None
-
     def _fill_summaries(self, items: list[dict]) -> None:
         """Run AI summaries with batched retries."""
         remaining = list(items)
@@ -152,7 +108,7 @@ class Crawler:
         while remaining and attempt <= max_retries:
             failures: list[dict] = []
             for item in remaining:
-                summary = self._call_ai(item["正文"])
+                summary = self.summarizer.summarize(item["正文"])
                 if summary:
                     item["摘要"] = summary
                 else:
@@ -179,37 +135,7 @@ class Crawler:
 
     def _call_embedding(self, texts: list[str]) -> list[list[float]] | None:
         cfg = self.config
-        if not (cfg.embed_base_url and cfg.embed_model and cfg.embed_api_key):
-            print("Embedding 配置缺失，跳过向量化")
-            return None
-
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {cfg.embed_api_key}",
-        }
-        payload = {
-            "model": cfg.embed_model,
-            "input": texts,
-        }
-        try:
-            resp = requests.post(cfg.embed_base_url, json=payload, headers=headers, timeout=60)
-            if resp.status_code != 200:
-                print(f"Embedding API 状态码异常: {resp.status_code}")
-                return None
-            data = resp.json()
-            items = data.get("data") or []
-            embeddings: list[list[float]] = []
-            for entry in items:
-                emb = entry.get("embedding")
-                if isinstance(emb, list):
-                    embeddings.append(emb)
-            if len(embeddings) != len(texts):
-                print("Embedding 数量与输入不一致")
-                return None
-            return embeddings
-        except requests.RequestException as exc:
-            print(f"调用 Embedding 失败: {exc}")
-            return None
+        return self.embedder.embed_batch(texts)
 
     def _generate_embeddings(self, conn, articles: List[dict]) -> None:
         texts = [self._compose_embed_text(a) for a in articles]
@@ -226,5 +152,5 @@ class Crawler:
                     "published_on": article["published_on"],
                 }
             )
-        inserted = insert_embeddings(conn, payloads)
+        inserted = self.repo.insert_embeddings(conn, payloads)
         print(f"向量入库完成，新增 {inserted} 条")

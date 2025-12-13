@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import contextlib
-from dataclasses import dataclass
 from typing import Any, Iterable
 
 import psycopg
@@ -9,17 +8,7 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Json
 
 from config.config import Config
-
-
-@dataclass
-class ArticleRecord:
-    title: str
-    unit: str
-    link: str
-    published_on: str  # YYYY-MM-DD
-    content: str
-    summary: str
-    attachments: list[dict[str, str]]
+from crawler.models import ArticleRecord
 
 
 def get_connection() -> psycopg.Connection:

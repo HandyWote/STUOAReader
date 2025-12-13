@@ -6,6 +6,8 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 
+from crawler.models import ArticleMeta, DetailResult
+
 BASE_URL = "http://oa.stu.edu.cn"
 LIST_URL = f"{BASE_URL}/login/Login.jsp?logintype=1"
 DETAIL_PAYLOAD = {"pageindex": "1", "pagesize": "50", "fwdw": "-1"}
@@ -22,7 +24,7 @@ def _post(url: str, data: dict | None = None) -> str | None:
     return None
 
 
-def fetch_list(target_date: str) -> list[dict[str, str]]:
+def fetch_list(target_date: str) -> list[ArticleMeta]:
     page = _post(LIST_URL, DETAIL_PAYLOAD)
     if not page:
         return []
@@ -32,7 +34,7 @@ def fetch_list(target_date: str) -> list[dict[str, str]]:
     if not tbody:
         return []
 
-    results: list[dict[str, str]] = []
+    results: list[ArticleMeta] = []
     for row in tbody.find_all("tr", class_="datalight"):
         cells = row.find_all("td")
         if len(cells) < 3:
@@ -51,12 +53,12 @@ def fetch_list(target_date: str) -> list[dict[str, str]]:
             continue
 
         results.append(
-            {
-                "标题": link_tag.get("title", "").strip() or link_tag.get_text(strip=True),
-                "链接": urljoin(BASE_URL, href),
-                "发布单位": cells[1].get_text(strip=True),
-                "发布日期": date_str,
-            }
+            ArticleMeta(
+                title=link_tag.get("title", "").strip() or link_tag.get_text(strip=True),
+                unit=cells[1].get_text(strip=True),
+                link=urljoin(BASE_URL, href),
+                published_on=date_str,
+            )
         )
     return results
 
@@ -88,10 +90,10 @@ def _parse_attachments(soup: BeautifulSoup) -> list[dict[str, str]]:
     return attachments
 
 
-def fetch_detail(link: str) -> tuple[str, list[dict[str, str]]]:
+def fetch_detail(link: str) -> DetailResult:
     html = _post(link, DETAIL_PAYLOAD)
     if not html:
-        return "", []
+        return DetailResult("", [])
 
     soup = BeautifulSoup(html, "html.parser")
     attachments = _parse_attachments(soup)
@@ -101,4 +103,4 @@ def fetch_detail(link: str) -> tuple[str, list[dict[str, str]]]:
         attach_lines = [f"附件: {item.get('名称','')} ({item.get('链接','')})" for item in attachments]
         content = f"{content}\n" + "\n".join(attach_lines)
 
-    return content, attachments
+    return DetailResult(content=content, attachments=attachments)
