@@ -19,7 +19,6 @@ from config.config import Config
 
 class OA:
     BASE_URL = "http://oa.stu.edu.cn/login/Login.jsp?logintype=1"
-    AI_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
 
     def __init__(self, target_date: str | None = None) -> None:
         self.config = Config()
@@ -144,8 +143,10 @@ class OA:
             print("AI API_KEY 未配置，跳过摘要生成")
             return "[AI 未配置]"
 
+        ai_url = self.config.ai_base_url
+        model = self.config.ai_model
         payload = {
-            "model": "glm-4.5-flash",
+            "model": model,
             "messages": [
                 {
                     "role": "system",
@@ -184,9 +185,9 @@ class OA:
         }
 
         try:
-            response = requests.post(self.AI_URL, json=payload, headers=headers, timeout=60)
+            response = requests.post(ai_url, json=payload, headers=headers, timeout=60)
             if response.status_code != 200:
-                print(f"AI API返回错误状态码: {response.status_code}")
+                print(f"AI API返回错误状态码: {response.status_code} (url={ai_url})")
                 return "[AI服务异常]"
 
             data = response.json()
@@ -204,9 +205,9 @@ class OA:
         except requests.exceptions.Timeout:
             print("AI API请求超时，正在重试...")
             try:
-                response = requests.post(self.AI_URL, json=payload, headers=headers, timeout=60)
+                response = requests.post(ai_url, json=payload, headers=headers, timeout=60)
                 if response.status_code != 200:
-                    print(f"AI API返回错误状态码: {response.status_code}")
+                    print(f"AI API返回错误状态码: {response.status_code} (url={ai_url})")
                     return "[AI服务异常]"
 
                 data = response.json()
@@ -236,9 +237,9 @@ class OA:
         except requests.exceptions.ConnectionError:
             print("AI API连接错误，正在重试...")
             try:
-                response = requests.post(self.AI_URL, json=payload, headers=headers, timeout=60)
+                response = requests.post(ai_url, json=payload, headers=headers, timeout=60)
                 if response.status_code != 200:
-                    print(f"AI API返回错误状态码: {response.status_code}")
+                    print(f"AI API返回错误状态码: {response.status_code} (url={ai_url})")
                     return "[AI服务异常]"
 
                 data = response.json()
@@ -268,9 +269,9 @@ class OA:
         except ValueError as exc:
             print(f"解析AI API返回的JSON时出错: {exc}，正在重试...")
             try:
-                response = requests.post(self.AI_URL, json=payload, headers=headers, timeout=60)
+                response = requests.post(ai_url, json=payload, headers=headers, timeout=60)
                 if response.status_code != 200:
-                    print(f"AI API返回错误状态码: {response.status_code}")
+                    print(f"AI API返回错误状态码: {response.status_code} (url={ai_url})")
                     return "[AI服务异常]"
 
                 data = response.json()
@@ -300,9 +301,9 @@ class OA:
         except requests.RequestException as exc:
             print(f"调用AI API时发生错误: {exc}，正在重试...")
             try:
-                response = requests.post(self.AI_URL, json=payload, headers=headers, timeout=60)
+                response = requests.post(ai_url, json=payload, headers=headers, timeout=60)
                 if response.status_code != 200:
-                    print(f"AI API返回错误状态码: {response.status_code}")
+                    print(f"AI API返回错误状态码: {response.status_code} (url={ai_url})")
                     return "[AI服务异常]"
 
                 data = response.json()

@@ -23,6 +23,8 @@ class Config:
         self.smtp_user: Optional[str] = None
         self.smtp_password: Optional[str] = None
         self.api_key: Optional[str] = None
+        self.ai_base_url: str = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+        self.ai_model: str = "glm-4.5-flash"
 
         self.load()
 
@@ -94,6 +96,8 @@ class Config:
             "SMTP_USER",
             "SMTP_PASSWORD",
             "API_KEY",
+            "AI_BASE_URL",
+            "AI_MODEL",
         ]
         for key in keys:
             value = os.getenv(key)
@@ -121,6 +125,12 @@ class Config:
         elif key == "API_KEY":
             token = value.replace("Bearer ", "", 1)
             self.api_key = token or None
+        elif key == "AI_BASE_URL":
+            if value:
+                self.ai_base_url = value
+        elif key == "AI_MODEL":
+            if value:
+                self.ai_model = value
 
 
 __all__ = ["Config"]
