@@ -1,0 +1,147 @@
+2025-12-16 14:20:14,345 - __main__ - ERROR - ÎÞ·¨Á¬½Óµ½Redis·þÎñÆ÷: Error 10061 connecting to localhost:6379. ÓÉÓÚÄ¿±ê¼ÆËã»ú»ý¼«¾Ü¾ø£¬ÎÞ·¨Á¬½Ó¡£.
+2025-12-16 14:20:15,950 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://172.29.131.75:5000
+2025-12-16 14:20:15,950 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-12-16 14:20:15,991 - werkzeug - INFO -  * Restarting with stat
+2025-12-16 14:20:20,392 - __main__ - ERROR - ÎÞ·¨Á¬½Óµ½Redis·þÎñÆ÷: Error 10061 connecting to localhost:6379. ÓÉÓÚÄ¿±ê¼ÆËã»ú»ý¼«¾Ü¾ø£¬ÎÞ·¨Á¬½Ó¡£.
+2025-12-16 14:20:20,649 - werkzeug - WARNING -  * Debugger is active!
+2025-12-16 14:20:20,657 - werkzeug - INFO -  * Debugger PIN: 259-891-669
+2025-12-16 14:20:37,329 - __main__ - ERROR - ÎÞ·¨Á¬½Óµ½Redis·þÎñÆ÷: Error 10061 connecting to localhost:6379. ÓÉÓÚÄ¿±ê¼ÆËã»ú»ý¼«¾Ü¾ø£¬ÎÞ·¨Á¬½Ó¡£.
+2025-12-16 14:20:37,589 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://172.29.131.75:5000
+2025-12-16 14:20:37,589 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-12-16 14:20:37,589 - werkzeug - INFO -  * Restarting with stat
+2025-12-16 14:20:41,931 - __main__ - ERROR - ÎÞ·¨Á¬½Óµ½Redis·þÎñÆ÷: Error 10061 connecting to localhost:6379. ÓÉÓÚÄ¿±ê¼ÆËã»ú»ý¼«¾Ü¾ø£¬ÎÞ·¨Á¬½Ó¡£.
+2025-12-16 14:20:42,260 - werkzeug - WARNING -  * Debugger is active!
+2025-12-16 14:20:42,264 - werkzeug - INFO -  * Debugger PIN: 259-891-669
+2025-12-16 14:20:46,117 - werkzeug - INFO - 127.0.0.1 - - [16/Dec/2025 14:20:46] "[33mGET /?ide_webview_request_time=1765866045707 HTTP/1.1[0m" 404 -
+2025-12-16 14:20:46,361 - werkzeug - INFO - 127.0.0.1 - - [16/Dec/2025 14:20:46] "[33mGET /@vite/client HTTP/1.1[0m" 404 -
+2025-12-16 14:23:40,418 - werkzeug - INFO -  * Detected change in 'D:\\Github file\\STUOAP\\OAP\\api\\routes\\articles.py', reloading
+2025-12-16 14:23:40,418 - werkzeug - INFO -  * Detected change in 'D:\\Github file\\STUOAP\\OAP\\api\\routes\\articles.py', reloading
+2025-12-16 14:23:40,474 - werkzeug - INFO -  * Restarting with stat
+2025-12-16 14:23:40,476 - werkzeug - INFO -  * Restarting with stat
+2025-12-16 14:23:44,866 - __main__ - ERROR - ÎÞ·¨Á¬½Óµ½Redis·þÎñÆ÷: Error 10061 connecting to localhost:6379. ÓÉÓÚÄ¿±ê¼ÆËã»ú»ý¼«¾Ü¾ø£¬ÎÞ·¨Á¬½Ó¡£.
+2025-12-16 14:23:44,874 - __main__ - ERROR - ÎÞ·¨Á¬½Óµ½Redis·þÎñÆ÷: Error 10061 connecting to localhost:6379. ÓÉÓÚÄ¿±ê¼ÆËã»ú»ý¼«¾Ü¾ø£¬ÎÞ·¨Á¬½Ó¡£.
+2025-12-16 14:23:45,080 - werkzeug - WARNING -  * Debugger is active!
+2025-12-16 14:23:45,084 - werkzeug - INFO -  * Debugger PIN: 259-891-669
+2025-12-16 14:23:45,084 - werkzeug - WARNING -  * Debugger is active!
+2025-12-16 14:23:45,084 - werkzeug - INFO -  * Debugger PIN: 259-891-669
+2025-12-16 14:24:02,616 - werkzeug - INFO -  * Detected change in 'D:\\Github file\\STUOAP\\OAP\\api\\routes\\articles.py', reloading
+2025-12-16 14:24:02,618 - werkzeug - INFO -  * Detected change in 'D:\\Github file\\STUOAP\\OAP\\api\\routes\\articles.py', reloading
+2025-12-16 14:24:02,822 - werkzeug - INFO -  * Restarting with stat
+2025-12-16 14:24:07,283 - __main__ - ERROR - ÎÞ·¨Á¬½Óµ½Redis·þÎñÆ÷: Error 10061 connecting to localhost:6379. ÓÉÓÚÄ¿±ê¼ÆËã»ú»ý¼«¾Ü¾ø£¬ÎÞ·¨Á¬½Ó¡£.
+2025-12-16 14:24:07,283 - __main__ - ERROR - ÎÞ·¨Á¬½Óµ½Redis·þÎñÆ÷: Error 10061 connecting to localhost:6379. ÓÉÓÚÄ¿±ê¼ÆËã»ú»ý¼«¾Ü¾ø£¬ÎÞ·¨Á¬½Ó¡£.
+2025-12-16 14:24:07,570 - werkzeug - WARNING -  * Debugger is active!
+2025-12-16 14:24:07,572 - werkzeug - WARNING -  * Debugger is active!
+2025-12-16 14:24:07,572 - werkzeug - INFO -  * Debugger PIN: 259-891-669
+2025-12-16 14:24:07,576 - werkzeug - INFO -  * Debugger PIN: 259-891-669
+2025-12-16 14:25:50,700 - __main__ - ERROR - ÎÞ·¨Á¬½Óµ½Redis·þÎñÆ÷: Error 10061 connecting to localhost:6379. ÓÉÓÚÄ¿±ê¼ÆËã»ú»ý¼«¾Ü¾ø£¬ÎÞ·¨Á¬½Ó¡£.
+2025-12-16 14:25:51,031 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://172.29.131.75:5000
+2025-12-16 14:25:51,031 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-12-16 14:25:51,031 - werkzeug - INFO -  * Restarting with stat
+2025-12-16 14:25:55,557 - __main__ - ERROR - ÎÞ·¨Á¬½Óµ½Redis·þÎñÆ÷: Error 10061 connecting to localhost:6379. ÓÉÓÚÄ¿±ê¼ÆËã»ú»ý¼«¾Ü¾ø£¬ÎÞ·¨Á¬½Ó¡£.
+2025-12-16 14:25:55,826 - werkzeug - WARNING -  * Debugger is active!
+2025-12-16 14:25:55,826 - werkzeug - INFO -  * Debugger PIN: 259-891-669
+2025-12-16 14:44:08,232 - werkzeug - INFO -  * Detected change in 'D:\\Github file\\STUOAP\\OAP\\api\\app.py', reloading
+2025-12-16 14:44:08,232 - werkzeug - INFO -  * Detected change in 'D:\\Github file\\STUOAP\\OAP\\api\\app.py', reloading
+2025-12-16 14:44:08,311 - werkzeug - INFO -  * Restarting with stat
+2025-12-16 14:44:08,311 - werkzeug - INFO -  * Restarting with stat
+2025-12-16 14:44:12,685 - __main__ - ERROR - ÎÞ·¨Á¬½Óµ½Redis·þÎñÆ÷: Error 10061 connecting to localhost:6379. ÓÉÓÚÄ¿±ê¼ÆËã»ú»ý¼«¾Ü¾ø£¬ÎÞ·¨Á¬½Ó¡£.
+2025-12-16 14:44:12,685 - __main__ - ERROR - ÎÞ·¨Á¬½Óµ½Redis·þÎñÆ÷: Error 10061 connecting to localhost:6379. ÓÉÓÚÄ¿±ê¼ÆËã»ú»ý¼«¾Ü¾ø£¬ÎÞ·¨Á¬½Ó¡£.
+2025-12-16 14:44:12,925 - werkzeug - WARNING -  * Debugger is active!
+2025-12-16 14:44:12,925 - werkzeug - WARNING -  * Debugger is active!
+2025-12-16 14:44:12,934 - werkzeug - INFO -  * Debugger PIN: 259-891-669
+2025-12-16 14:44:12,934 - werkzeug - INFO -  * Debugger PIN: 259-891-669
+2025-12-16 14:44:19,179 - werkzeug - INFO -  * Detected change in 'D:\\Github file\\STUOAP\\OAP\\api\\app.py', reloading
+2025-12-16 14:44:19,179 - werkzeug - INFO -  * Detected change in 'D:\\Github file\\STUOAP\\OAP\\api\\app.py', reloading
+2025-12-16 14:44:19,260 - werkzeug - INFO -  * Restarting with stat
+2025-12-16 14:44:19,260 - werkzeug - INFO -  * Restarting with stat
+2025-12-16 14:44:23,615 - __main__ - ERROR - ÎÞ·¨Á¬½Óµ½Redis·þÎñÆ÷: Error 10061 connecting to localhost:6379. ÓÉÓÚÄ¿±ê¼ÆËã»ú»ý¼«¾Ü¾ø£¬ÎÞ·¨Á¬½Ó¡£.
+2025-12-16 14:44:23,615 - __main__ - ERROR - ÎÞ·¨Á¬½Óµ½Redis·þÎñÆ÷: Error 10061 connecting to localhost:6379. ÓÉÓÚÄ¿±ê¼ÆËã»ú»ý¼«¾Ü¾ø£¬ÎÞ·¨Á¬½Ó¡£.
+2025-12-16 14:44:23,860 - werkzeug - WARNING -  * Debugger is active!
+2025-12-16 14:44:23,870 - werkzeug - WARNING -  * Debugger is active!
+2025-12-16 14:44:23,870 - werkzeug - INFO -  * Debugger PIN: 259-891-669
+2025-12-16 14:44:23,870 - werkzeug - INFO -  * Debugger PIN: 259-891-669
+2025-12-16 14:44:35,282 - werkzeug - INFO -  * Detected change in 'D:\\Github file\\STUOAP\\OAP\\api\\app.py', reloading
+2025-12-16 14:44:35,284 - werkzeug - INFO -  * Detected change in 'D:\\Github file\\STUOAP\\OAP\\api\\app.py', reloading
+2025-12-16 14:44:35,348 - werkzeug - INFO -  * Restarting with stat
+2025-12-16 14:44:35,348 - werkzeug - INFO -  * Restarting with stat
+2025-12-16 14:44:39,727 - __main__ - ERROR - ÎÞ·¨Á¬½Óµ½Redis·þÎñÆ÷: Error 10061 connecting to localhost:6379. ÓÉÓÚÄ¿±ê¼ÆËã»ú»ý¼«¾Ü¾ø£¬ÎÞ·¨Á¬½Ó¡£.
+2025-12-16 14:44:39,727 - __main__ - ERROR - ÎÞ·¨Á¬½Óµ½Redis·þÎñÆ÷: Error 10061 connecting to localhost:6379. ÓÉÓÚÄ¿±ê¼ÆËã»ú»ý¼«¾Ü¾ø£¬ÎÞ·¨Á¬½Ó¡£.
+2025-12-16 14:44:39,942 - werkzeug - WARNING -  * Debugger is active!
+2025-12-16 14:44:39,951 - werkzeug - INFO -  * Debugger PIN: 259-891-669
+2025-12-16 14:44:39,951 - werkzeug - WARNING -  * Debugger is active!
+2025-12-16 14:44:39,959 - werkzeug - INFO -  * Debugger PIN: 259-891-669
+2025-12-16 14:44:52,399 - werkzeug - INFO -  * Detected change in 'D:\\Github file\\STUOAP\\OAP\\api\\routes\\auth.py', reloading
+2025-12-16 14:44:52,404 - werkzeug - INFO -  * Detected change in 'D:\\Github file\\STUOAP\\OAP\\api\\routes\\auth.py', reloading
+2025-12-16 14:44:52,462 - werkzeug - INFO -  * Restarting with stat
+2025-12-16 14:44:52,462 - werkzeug - INFO -  * Restarting with stat
+2025-12-16 14:44:56,868 - __main__ - ERROR - ÎÞ·¨Á¬½Óµ½Redis·þÎñÆ÷: Error 10061 connecting to localhost:6379. ÓÉÓÚÄ¿±ê¼ÆËã»ú»ý¼«¾Ü¾ø£¬ÎÞ·¨Á¬½Ó¡£.
+2025-12-16 14:44:56,893 - __main__ - ERROR - ÎÞ·¨Á¬½Óµ½Redis·þÎñÆ÷: Error 10061 connecting to localhost:6379. ÓÉÓÚÄ¿±ê¼ÆËã»ú»ý¼«¾Ü¾ø£¬ÎÞ·¨Á¬½Ó¡£.
+2025-12-16 14:44:57,108 - werkzeug - WARNING -  * Debugger is active!
+2025-12-16 14:44:57,112 - werkzeug - INFO -  * Debugger PIN: 259-891-669
+2025-12-16 14:44:57,112 - werkzeug - WARNING -  * Debugger is active!
+2025-12-16 14:44:57,117 - werkzeug - INFO -  * Debugger PIN: 259-891-669
+2025-12-16 14:45:09,449 - werkzeug - INFO -  * Detected change in 'D:\\Github file\\STUOAP\\OAP\\api\\routes\\articles.py', reloading
+2025-12-16 14:45:09,452 - werkzeug - INFO -  * Detected change in 'D:\\Github file\\STUOAP\\OAP\\api\\routes\\articles.py', reloading
+2025-12-16 14:45:09,519 - werkzeug - INFO -  * Restarting with stat
+2025-12-16 14:45:09,519 - werkzeug - INFO -  * Restarting with stat
+2025-12-16 14:45:13,905 - __main__ - ERROR - ÎÞ·¨Á¬½Óµ½Redis·þÎñÆ÷: Error 10061 connecting to localhost:6379. ÓÉÓÚÄ¿±ê¼ÆËã»ú»ý¼«¾Ü¾ø£¬ÎÞ·¨Á¬½Ó¡£.
+2025-12-16 14:45:14,149 - werkzeug - WARNING -  * Debugger is active!
+2025-12-16 14:45:14,149 - werkzeug - INFO -  * Debugger PIN: 259-891-669
+2025-12-16 14:45:14,149 - werkzeug - WARNING -  * Debugger is active!
+2025-12-16 14:45:14,149 - werkzeug - INFO -  * Debugger PIN: 259-891-669
+2025-12-16 14:45:31,806 - werkzeug - INFO -  * Detected change in 'D:\\Github file\\STUOAP\\OAP\\api\\routes\\ai.py', reloading
+2025-12-16 14:45:31,811 - werkzeug - INFO -  * Detected change in 'D:\\Github file\\STUOAP\\OAP\\api\\routes\\ai.py', reloading
+2025-12-16 14:45:31,869 - werkzeug - INFO -  * Restarting with stat
+2025-12-16 14:45:36,281 - __main__ - ERROR - ÎÞ·¨Á¬½Óµ½Redis·þÎñÆ÷: Error 10061 connecting to localhost:6379. ÓÉÓÚÄ¿±ê¼ÆËã»ú»ý¼«¾Ü¾ø£¬ÎÞ·¨Á¬½Ó¡£.
+2025-12-16 14:45:36,281 - __main__ - ERROR - ÎÞ·¨Á¬½Óµ½Redis·þÎñÆ÷: Error 10061 connecting to localhost:6379. ÓÉÓÚÄ¿±ê¼ÆËã»ú»ý¼«¾Ü¾ø£¬ÎÞ·¨Á¬½Ó¡£.
+2025-12-16 23:57:36,890 - __main__ - ERROR - ÎÞ·¨Á¬½Óµ½Redis·þÎñÆ÷: Error 10061 connecting to localhost:6379. ÓÉÓÚÄ¿±ê¼ÆËã»ú»ý¼«¾Ü¾ø£¬ÎÞ·¨Á¬½Ó¡£.
+2025-12-16 23:57:37,740 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://172.20.10.4:5000
+2025-12-16 23:57:37,741 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-12-16 23:57:37,743 - werkzeug - INFO -  * Restarting with stat
+2025-12-16 23:57:42,095 - __main__ - ERROR - ÎÞ·¨Á¬½Óµ½Redis·þÎñÆ÷: Error 10061 connecting to localhost:6379. ÓÉÓÚÄ¿±ê¼ÆËã»ú»ý¼«¾Ü¾ø£¬ÎÞ·¨Á¬½Ó¡£.
+2025-12-16 23:57:42,283 - werkzeug - WARNING -  * Debugger is active!
+2025-12-16 23:57:42,285 - werkzeug - INFO -  * Debugger PIN: 259-891-669
+2025-12-17 00:00:16,479 - __main__ - ERROR - ÎÞ·¨Á¬½Óµ½Redis·þÎñÆ÷: Error 10061 connecting to localhost:6379. ÓÉÓÚÄ¿±ê¼ÆËã»ú»ý¼«¾Ü¾ø£¬ÎÞ·¨Á¬½Ó¡£.
+2025-12-17 00:00:16,663 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://172.20.10.4:5000
+2025-12-17 00:00:16,664 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-12-17 00:00:16,665 - werkzeug - INFO -  * Restarting with stat
+2025-12-17 00:00:21,008 - __main__ - ERROR - ÎÞ·¨Á¬½Óµ½Redis·þÎñÆ÷: Error 10061 connecting to localhost:6379. ÓÉÓÚÄ¿±ê¼ÆËã»ú»ý¼«¾Ü¾ø£¬ÎÞ·¨Á¬½Ó¡£.
+2025-12-17 00:00:21,211 - werkzeug - WARNING -  * Debugger is active!
+2025-12-17 00:00:21,212 - werkzeug - INFO -  * Debugger PIN: 259-891-669
+2025-12-17 00:01:38,075 - werkzeug - INFO - 127.0.0.1 - - [17/Dec/2025 00:01:38] "GET /api/health HTTP/1.1" 200 -
+2025-12-17 00:07:07,874 - __main__ - ERROR - ÎÞ·¨Á¬½Óµ½Redis·þÎñÆ÷: Error 10061 connecting to localhost:6379. ÓÉÓÚÄ¿±ê¼ÆËã»ú»ý¼«¾Ü¾ø£¬ÎÞ·¨Á¬½Ó¡£.
+2025-12-17 00:07:08,103 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://172.20.10.4:5000
+2025-12-17 00:07:08,105 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-12-17 00:07:08,106 - werkzeug - INFO -  * Restarting with stat
+2025-12-17 00:07:12,443 - __main__ - ERROR - ÎÞ·¨Á¬½Óµ½Redis·þÎñÆ÷: Error 10061 connecting to localhost:6379. ÓÉÓÚÄ¿±ê¼ÆËã»ú»ý¼«¾Ü¾ø£¬ÎÞ·¨Á¬½Ó¡£.
+2025-12-17 00:07:12,614 - werkzeug - WARNING -  * Debugger is active!
+2025-12-17 00:07:12,616 - werkzeug - INFO -  * Debugger PIN: 259-891-669
+2025-12-17 00:07:27,403 - werkzeug - INFO - 127.0.0.1 - - [17/Dec/2025 00:07:27] "GET /api/health HTTP/1.1" 200 -
+2025-12-17 00:22:38,334 - werkzeug - INFO -  * Detected change in 'D:\\Github file\\STUOAP\\OAP\\crawler\\pipeline.py', reloading
+2025-12-17 00:22:38,379 - werkzeug - INFO -  * Restarting with stat
+2025-12-17 00:22:42,716 - __main__ - ERROR - ÎÞ·¨Á¬½Óµ½Redis·þÎñÆ÷: Error 10061 connecting to localhost:6379. ÓÉÓÚÄ¿±ê¼ÆËã»ú»ý¼«¾Ü¾ø£¬ÎÞ·¨Á¬½Ó¡£.
+2025-12-17 00:22:42,941 - werkzeug - WARNING -  * Debugger is active!
+2025-12-17 00:22:42,943 - werkzeug - INFO -  * Debugger PIN: 259-891-669
+2025-12-17 00:25:48,541 - werkzeug - INFO -  * Detected change in 'D:\\Github file\\STUOAP\\OAP\\test_crawler_components.py', reloading
+2025-12-17 00:25:48,604 - werkzeug - INFO -  * Restarting with stat
+2025-12-17 00:25:52,973 - __main__ - ERROR - ÎÞ·¨Á¬½Óµ½Redis·þÎñÆ÷: Error 10061 connecting to localhost:6379. ÓÉÓÚÄ¿±ê¼ÆËã»ú»ý¼«¾Ü¾ø£¬ÎÞ·¨Á¬½Ó¡£.
+2025-12-17 00:25:53,152 - werkzeug - WARNING -  * Debugger is active!
+2025-12-17 00:25:53,154 - werkzeug - INFO -  * Debugger PIN: 259-891-669

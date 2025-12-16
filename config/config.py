@@ -1,4 +1,8 @@
-"""Simple configuration loader for the OAP project."""
+"""OAP项目的配置加载器。
+
+该模块提供了一个集中式的配置管理系统，从环境文件和系统环境变量中加载设置，
+环境变量的优先级高于基于文件的设置。
+"""
 
 from __future__ import annotations
 
@@ -8,131 +12,220 @@ from typing import Optional
 
 
 class Config:
-    """Load runtime settings from ``env`` and environment variables."""
+    """从环境文件和环境变量加载运行时设置。
+    
+    配置系统遵循以下优先级顺序：
+    1. 默认值（在 __init__ 中设置）
+    2. 环境文件中的值（如果存在）
+    3. 环境变量（最高优先级）
+    
+    属性：
+        project_root: 项目根目录
+        env_file: 环境配置文件的路径
+        events_dir: 存储事件数据的目录
+        recipient_list_file: 邮件接收者列表的路径
+        smtp_server: 用于邮件通知的SMTP服务器
+        smtp_port: SMTP服务器端口
+        smtp_user: SMTP用户名
+        smtp_password: SMTP密码
+        api_key: AI服务的API密钥
+        ai_base_url: AI聊天完成API的基础URL
+        ai_model: 要使用的AI模型名称
+        database_url: 数据库连接URL
+        embed_base_url: 嵌入服务的基础URL
+        embed_model: 嵌入模型名称
+        embed_api_key: 嵌入服务的API密钥
+        embed_dim: 嵌入向量的维度
+    """
 
     def __init__(self, env_file: str | Path | None = None) -> None:
+        """使用默认值初始化配置并从源加载。
+        
+        参数：
+            env_file: 环境文件的可选自定义路径。
+                     如果未提供，则使用 project_root/env
+        """
+        # 确定项目根目录（此文件上两级）
         self.project_root = Path(__file__).resolve().parents[1]
+        
+        # 设置默认环境文件路径
         default_env = self.project_root / "env"
         self.env_file = self._resolve_path(env_file) if env_file else default_env
 
-        # Defaults that work for local development out of the box
-        self.events_dir: Path = self.project_root / "events"
-        self.recipient_list_file: Path = self.project_root / "List.txt"
-        self.smtp_server: str = "smtp.163.com"
-        self.smtp_port: int = 465
-        self.smtp_user: Optional[str] = None
-        self.smtp_password: Optional[str] = None
-        self.api_key: Optional[str] = None
-        self.ai_base_url: str = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
-        self.ai_model: str = "glm-4.5-flash"
-        self.database_url: Optional[str] = None
-        self.embed_base_url: Optional[str] = None
-        self.embed_model: Optional[str] = None
-        self.embed_api_key: Optional[str] = None
-        self.embed_dim: int = 1024
+        # 本地开发的默认配置值
+        self.events_dir: Path = self.project_root / "events"  # 事件数据目录
+        self.recipient_list_file: Path = self.project_root / "List.txt"  # 邮件接收者
+        self.smtp_server: str = "smtp.163.com"  # 通知用的SMTP服务器
+        self.smtp_port: int = 465  # SMTP SSL端口
+        self.smtp_user: Optional[str] = None  # SMTP用户名
+        self.smtp_password: Optional[str] = None  # SMTP密码
+        self.api_key: Optional[str] = None  # AI服务API密钥
+        self.ai_base_url: str = "https://open.bigmodel.cn/api/paas/v4/chat/completions"  # GLM API URL
+        self.ai_model: str = "glm-4.5-flash"  # 默认AI模型
+        self.database_url: Optional[str] = None  # 数据库连接字符串
+        self.embed_base_url: Optional[str] = None  # 嵌入服务URL
+        self.embed_model: Optional[str] = None  # 嵌入模型名称
+        self.embed_api_key: Optional[str] = None  # 嵌入服务API密钥
+        self.embed_dim: int = 1024  # 嵌入向量维度
 
+        # 从所有源加载配置
         self.load()
 
     # ------------------------------------------------------------------
-    # Public helpers used by Sender/OA
+    # Sender/OA 使用的公共辅助方法
     # ------------------------------------------------------------------
     def load(self) -> None:
-        """Populate configuration values from file and environment."""
+        """从文件和环境变量填充配置值。
+        
+        按以下顺序加载设置：
+        1. 从环境文件（如果存在）
+        2. 从系统环境变量（覆盖文件值）
+        """
         self._load_from_env_file()
         self._override_with_environment()
 
     def reload(self) -> None:
-        """Force a fresh read of configuration sources."""
+        """强制重新读取配置源。
+        
+        当配置文件或环境变量发生变化时很有用。
+        """
         self.load()
 
     def ensure_directories(self) -> None:
+        """确保所需目录存在，必要时创建它们。
+        
+        目前确保 events_dir 目录存在。
+        """
         self.events_dir.mkdir(parents=True, exist_ok=True)
 
     @property
     def ai_headers(self) -> dict[str, str]:
+        """为AI API请求生成头信息。
+        
+        返回：
+            包含Content-Type和可选Authorization头的字典
+        """
         headers = {"Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
         return headers
 
     # ------------------------------------------------------------------
-    # Internal helpers
+    # 内部辅助方法
     # ------------------------------------------------------------------
     def _resolve_path(self, value: str | Path) -> Path:
+        """将路径解析为绝对路径，如果需要，相对于项目根目录。
+        
+        参数：
+            value: 要解析的路径字符串或Path对象
+            
+        返回：
+            绝对Path对象
+        """
         path = Path(value)
         if path.is_absolute():
             return path
         return (self.project_root / path).resolve()
 
     def _load_from_env_file(self) -> None:
+        """从环境文件加载配置值。
+        
+        支持两种格式：
+        1. KEY=VALUE格式（标准）
+        2. 简单值行（SMTP_USER、SMTP_PASSWORD、API_KEY的遗留回退）
+        
+        跳过空行和以#开头的行。
+        """
         if not self.env_file.exists():
             return
 
+        # 遗留支持：这些键的简单行格式
         fallback_keys = ["SMTP_USER", "SMTP_PASSWORD", "API_KEY"]
         fallback_index = 0
 
         try:
             for raw_line in self.env_file.read_text(encoding="utf-8").splitlines():
                 line = raw_line.strip()
+                # 跳过注释和空行
                 if not line or line.startswith("#"):
                     continue
 
                 if "=" in line:
+                    # 标准KEY=VALUE格式
                     key, raw_value = line.split("=", 1)
                     key = key.strip().upper()
                     value = raw_value.strip()
                 else:
+                    # 遗留格式：按顺序的简单值行
                     if fallback_index >= len(fallback_keys):
                         continue
                     key = fallback_keys[fallback_index]
                     value = line
                     fallback_index += 1
 
+                # 将设置应用到相应的属性
                 self._apply_setting(key, value)
         except OSError as exc:
             raise RuntimeError(f"无法读取配置文件: {self.env_file}") from exc
 
     def _override_with_environment(self) -> None:
+        """用系统环境变量覆盖配置值。
+        
+        环境变量的优先级高于环境文件中的值。
+        """
+        # 可以通过环境变量设置的配置键列表
         keys = [
-            "EVENTS_DIR",
-            "RECIPIENT_LIST",
-            "SMTP_SERVER",
-            "SMTP_PORT",
-            "SMTP_USER",
-            "SMTP_PASSWORD",
-            "API_KEY",
-            "AI_BASE_URL",
-            "AI_MODEL",
-            "DATABASE_URL",
-            "EMBED_BASE_URL",
-            "EMBED_MODEL",
-            "EMBED_API_KEY",
-            "EMBED_DIM",
+            "EVENTS_DIR",       # 事件数据目录
+            "RECIPIENT_LIST",   # 接收者列表文件路径
+            "SMTP_SERVER",      # SMTP服务器地址
+            "SMTP_PORT",        # SMTP服务器端口
+            "SMTP_USER",        # SMTP用户名
+            "SMTP_PASSWORD",    # SMTP密码
+            "API_KEY",          # AI服务API密钥
+            "AI_BASE_URL",      # AI API基础URL
+            "AI_MODEL",         # AI模型名称
+            "DATABASE_URL",     # 数据库连接字符串
+            "EMBED_BASE_URL",   # 嵌入服务基础URL
+            "EMBED_MODEL",      # 嵌入模型名称
+            "EMBED_API_KEY",    # 嵌入服务API密钥
+            "EMBED_DIM",        # 嵌入向量维度
         ]
+        
         for key in keys:
             value = os.getenv(key)
             if value is not None and value != "":
                 self._apply_setting(key, value)
 
     def _apply_setting(self, key: str, raw_value: str) -> None:
+        """将配置设置应用到相应的属性。
+        
+        参数：
+            key: 配置键（大写）
+            raw_value: 来自文件或环境的原始字符串值
+        """
         value = raw_value.strip()
+        
         if key == "EVENTS_DIR":
+            # 如有需要，相对于项目根目录解析路径
             self.events_dir = self._resolve_path(value)
         elif key == "RECIPIENT_LIST":
+            # 如有需要，相对于项目根目录解析路径
             self.recipient_list_file = self._resolve_path(value)
         elif key == "SMTP_SERVER":
             if value:
                 self.smtp_server = value
         elif key == "SMTP_PORT":
+            # 转换字符串为整数
             try:
                 self.smtp_port = int(value)
             except ValueError:
-                pass
+                pass  # 如果转换失败，保持默认值
         elif key == "SMTP_USER":
             self.smtp_user = value or None
         elif key == "SMTP_PASSWORD":
             self.smtp_password = value or None
         elif key == "API_KEY":
+            # 如果存在，移除 "Bearer " 前缀
             token = value.replace("Bearer ", "", 1)
             self.api_key = token or None
         elif key == "AI_BASE_URL":
@@ -150,10 +243,11 @@ class Config:
         elif key == "EMBED_API_KEY":
             self.embed_api_key = value or None
         elif key == "EMBED_DIM":
+            # 转换字符串为整数
             try:
                 self.embed_dim = int(value)
             except ValueError:
-                pass
+                pass  # 如果转换失败，保持默认值
 
 
-__all__ = ["Config"]
+__all__ = ["Config"]  # 此模块的公共API

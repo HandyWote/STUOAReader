@@ -1,3 +1,9 @@
+"""OA 系统文章 AI 摘要生成模块。
+
+该模块负责使用 AI 模型（OpenAI Chat 兼容）为爬取到的 OA 系统文章生成摘要。
+它实现了与 AI API 的交互，并提供了摘要生成的功能，支持配置化的 AI 参数设置。
+"""
+
 from __future__ import annotations
 
 import re
@@ -9,21 +15,41 @@ from config.config import Config
 
 
 class Summarizer:
-    """AI 摘要模块(OpenAI Chat 兼容)"""
+    """AI 摘要生成器类。
+    
+    用于生成 OA 系统文章的 AI 摘要，基于 OpenAI Chat API 兼容接口。
+    实现了完整的 AI 摘要生成流程，包括请求构建、API 调用和响应处理。
+    """
 
     def __init__(self, config: Optional[Config] = None) -> None:
+        """初始化摘要生成器。
+        
+        参数：
+            config: 配置对象，包含 AI API 的相关配置（如 API 地址、模型名称、API 密钥等）
+        """
         self.config = config or Config()
 
     def summarize(self, content: str) -> str | None:
+        """为给定的文章内容生成 AI 摘要。
+        
+        参数：
+            content: 待摘要的文章内容
+            
+        返回：
+            str | None: 生成的摘要文本，AI 未配置或调用失败时返回 None
+        """
+        # 构建请求头
         headers = dict(self.config.ai_headers)
+        # 检查 AI 配置是否完整
         if "Authorization" not in headers:
             return "[AI 未配置]"
 
+        # 构建 AI API 请求参数
         payload = {
-            "model": self.config.ai_model,
+            "model": self.config.ai_model,  # AI 模型名称
             "messages": [
                 {
-                    "role": "system",
+                    "role": "system",  # 系统角色提示词
                     "content": (
                         """角色设定：
 你是一个专业的事件通知摘要生成器，擅长从各类通知公告中提取核心信息，并生成客观、中立的简短摘要。
@@ -51,26 +77,35 @@ class Summarizer:
 请基于以下通知生成摘要："""
                     ),
                 },
-                {"role": "user", "content": content},
+                {"role": "user", "content": content},  # 用户输入的文章内容
             ],
-            "stream": False,
-            "temperature": 0.7,
-            "max_tokens": 2000,
+            "stream": False,  # 非流式返回
+            "temperature": 0.7,  # 生成温度（控制随机性）
+            "max_tokens": 2000,  # 最大生成令牌数
         }
 
         try:
+            # 调用 AI API
             resp = requests.post(self.config.ai_base_url, json=payload, headers=headers, timeout=60)
+            # 检查响应状态
             if resp.status_code != 200:
                 print(f"AI API返回错误状态码: {resp.status_code}")
                 return None
+            
+            # 解析响应结果
             data = resp.json()
             choices = data.get("choices") or []
             if not choices:
                 return None
+            
+            # 提取摘要文本
             text = choices[-1]["message"].get("content", "").strip()
+            # 清理特殊格式（如思考过程标记）
             text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
+            # 移除可能的标题标记
             text = text.lstrip("# ").lstrip()
             return text
         except requests.RequestException as exc:
+            # 处理请求异常
             print(f"调用AI失败: {exc}")
             return None

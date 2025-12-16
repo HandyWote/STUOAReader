@@ -11,4 +11,15 @@ user.db
 env
 AGENTS.md
 __pycache__
+api/__pycache__/
 events
+pgvector_local_deployment.md
+pgvector_local_install_guide.md
+项目运行指南.md
+test_crawler_components.py
+test_db_connection.py
+test_output.py
+.env
+docker-compose.yml
+Dockerfile
+.dockerignore
