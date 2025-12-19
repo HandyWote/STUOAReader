@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import os
+from datetime import timedelta
 from pathlib import Path
 from typing import Optional
 
@@ -67,6 +68,16 @@ class Config:
         self.embed_model: Optional[str] = None  # 嵌入模型名称
         self.embed_api_key: Optional[str] = None  # 嵌入服务API密钥
         self.embed_dim: int = 1024  # 嵌入向量维度
+        # 认证与校园 SSO
+        self.auth_access_token_ttl: timedelta = timedelta(hours=1)
+        self.auth_refresh_token_ttl: timedelta = timedelta(days=7)
+        self.auth_jwt_secret: Optional[str] = None
+        self.auth_password_cost: int = 12
+        self.auth_refresh_hash_key: Optional[str] = None
+        self.auth_allow_auto_user_creation: bool = True
+        self.campus_auth_enabled: bool = True
+        self.campus_auth_url: Optional[str] = "http://a.stu.edu.cn/ac_portal/login.php"
+        self.campus_auth_timeout: int = 10  # seconds
 
         # 从所有源加载配置
         self.load()
@@ -189,6 +200,16 @@ class Config:
             "EMBED_MODEL",      # 嵌入模型名称
             "EMBED_API_KEY",    # 嵌入服务API密钥
             "EMBED_DIM",        # 嵌入向量维度
+            # Auth & SSO
+            "AUTH_ACCESS_TOKEN_TTL",
+            "AUTH_REFRESH_TOKEN_TTL",
+            "AUTH_JWT_SECRET",
+            "AUTH_PASSWORD_COST",
+            "AUTH_REFRESH_HASH_KEY",
+            "AUTH_ALLOW_AUTO_USER_CREATION",
+            "CAMPUS_AUTH_ENABLED",
+            "CAMPUS_AUTH_URL",
+            "CAMPUS_AUTH_TIMEOUT",
         ]
         
         for key in keys:
@@ -248,6 +269,36 @@ class Config:
                 self.embed_dim = int(value)
             except ValueError:
                 pass  # 如果转换失败，保持默认值
+        elif key == "AUTH_ACCESS_TOKEN_TTL":
+            try:
+                self.auth_access_token_ttl = timedelta(seconds=int(value))
+            except ValueError:
+                pass
+        elif key == "AUTH_REFRESH_TOKEN_TTL":
+            try:
+                self.auth_refresh_token_ttl = timedelta(seconds=int(value))
+            except ValueError:
+                pass
+        elif key == "AUTH_JWT_SECRET":
+            self.auth_jwt_secret = value or None
+        elif key == "AUTH_PASSWORD_COST":
+            try:
+                self.auth_password_cost = int(value)
+            except ValueError:
+                pass
+        elif key == "AUTH_REFRESH_HASH_KEY":
+            self.auth_refresh_hash_key = value or None
+        elif key == "AUTH_ALLOW_AUTO_USER_CREATION":
+            self.auth_allow_auto_user_creation = value.lower() in ("1", "true", "yes", "on")
+        elif key == "CAMPUS_AUTH_ENABLED":
+            self.campus_auth_enabled = value.lower() in ("1", "true", "yes", "on")
+        elif key == "CAMPUS_AUTH_URL":
+            self.campus_auth_url = value or None
+        elif key == "CAMPUS_AUTH_TIMEOUT":
+            try:
+                self.campus_auth_timeout = int(value)
+            except ValueError:
+                pass
 
 
 __all__ = ["Config"]  # 此模块的公共API
