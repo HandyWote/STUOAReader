@@ -12,11 +12,11 @@ from uuid import UUID, uuid4
 import bcrypt
 import jwt
 
-from api.models.auth import Session, User
-from api.repository.user_repository import NotFoundError, UserRepository
-from api.services.campus_auth import CampusAuthenticator
-from api.services.exceptions import InvalidCredentialsError, UnauthorizedError, ValidationError
-from config.config import Config
+from backend.models.auth import Session, User
+from backend.repository.user_repository import NotFoundError, UserRepository
+from backend.services.campus_auth import CampusAuthenticator
+from backend.services.exceptions import InvalidCredentialsError, UnauthorizedError, ValidationError
+from backend.config import Config
 
 
 @dataclass

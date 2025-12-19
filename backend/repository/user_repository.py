@@ -3,8 +3,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
-from api.models.auth import Session, User, UserCredential
-from crawler.db import db_session
+from backend.models.auth import Session, User, UserCredential
+from backend.db import db_session
 
 
 class NotFoundError(Exception):

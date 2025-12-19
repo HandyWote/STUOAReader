@@ -7,11 +7,11 @@ from typing import Any, Callable
 
 from flask import Blueprint, jsonify, request
 
-from api.repository.user_repository import UserRepository
-from api.services.auth_service import AuthMetadata, AuthService
-from api.services.campus_auth import CampusAuthenticator
-from api.services.exceptions import InvalidCredentialsError, UnauthorizedError, ValidationError
-from config.config import Config
+from backend.repository.user_repository import UserRepository
+from backend.services.auth_service import AuthMetadata, AuthService
+from backend.services.campus_auth import CampusAuthenticator
+from backend.services.exceptions import InvalidCredentialsError, UnauthorizedError, ValidationError
+from backend.config import Config
 
 bp = Blueprint("auth", __name__)
 

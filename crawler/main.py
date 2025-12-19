@@ -19,6 +19,14 @@ from __future__ import annotations
 import argparse
 from datetime import datetime
 
+from pathlib import Path
+import sys
+
+# 保证以脚本运行时也能找到 crawler 包
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from crawler import Crawler
 
 

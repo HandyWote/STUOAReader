@@ -19,7 +19,7 @@ import psycopg
 from psycopg.rows import dict_row
 from psycopg.types.json import Json
 
-from config.config import Config
+from crawler.config import Config
 from crawler.models import ArticleRecord
 
 

@@ -6,7 +6,8 @@
 from __future__ import annotations
 
 import logging
-import os
+from pathlib import Path
+import sys
 from typing import Any
 
 from flask import Flask, jsonify, request
@@ -15,7 +16,12 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import redis
 
-from config.config import Config
+# 确保脚本运行时能找到 backend 包
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from backend.config import Config
 
 # 初始化配置
 config = Config()
@@ -26,7 +32,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler(config.project_root / 'api.log')
+        logging.FileHandler(config.project_root / 'backend' / 'backend.log')
     ]
 )
 logger = logging.getLogger(__name__)
@@ -35,14 +41,14 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 # 配置应用
-# 1. JWT签名密钥，生产环境应从环境变量获取
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key')  # 用于JWT签名
+# 1. JWT签名密钥
+app.config['SECRET_KEY'] = config.auth_jwt_secret or 'dev-secret'  # 用于JWT签名
 # 2. JSON响应支持中文
 app.config['JSON_AS_ASCII'] = False  # 支持中文
 
 # 配置CORS
 # 支持跨域资源共享，允许前端应用从不同域名访问API
-CORS(app, origins=['*'])  # 允许所有来源，生产环境应限制具体域名
+CORS(app, origins=config.cors_allow_origins or ['*'])  # 允许所有来源，生产环境应限制具体域名
 
 # 配置API限流
 # 使用客户端IP作为唯一标识，防止恶意请求
@@ -58,10 +64,10 @@ limiter = Limiter(
 redis_client = None
 try:
     redis_client = redis.Redis(
-        host=os.environ.get('REDIS_HOST', 'localhost'),  # Redis服务器地址
-        port=int(os.environ.get('REDIS_PORT', 6379)),    # Redis端口
-        db=int(os.environ.get('REDIS_DB', 0)),           # Redis数据库
-        password=os.environ.get('REDIS_PASSWORD', None)  # Redis密码
+        host=config.redis_host,  # Redis服务器地址
+        port=config.redis_port,  # Redis端口
+        db=config.redis_db,      # Redis数据库
+        password=config.redis_password  # Redis密码
     )
     # 测试连接
     redis_client.ping()
@@ -73,7 +79,7 @@ except Exception as e:
 
 # 初始化缓存
 # 封装Redis缓存功能，支持304 Not Modified响应
-from api.utils.redis_cache import init_cache, RedisCache
+from backend.utils.redis_cache import init_cache, RedisCache
 redis_cache = init_cache(redis_client)
 
 # 全局错误处理
@@ -114,7 +120,7 @@ def health_check() -> tuple[Any, int]:
     }), 200
 
 # 导入并注册路由
-from api.routes import articles, auth, ai
+from backend.routes import articles, auth, ai
 
 app.register_blueprint(auth.bp, url_prefix='/api/auth')
 app.register_blueprint(articles.bp, url_prefix='/api/articles')

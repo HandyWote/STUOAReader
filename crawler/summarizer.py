@@ -11,7 +11,7 @@ from typing import Optional
 
 import requests
 
-from config.config import Config
+from crawler.config import Config
 
 
 class Summarizer:

@@ -10,9 +10,9 @@ from typing import Any
 
 from flask import Blueprint, jsonify, request, make_response
 
-from crawler.db import db_session, fetch_article_ids, get_connection
-from api.routes.auth import login_required
-from api.utils.redis_cache import get_cache
+from backend.db import db_session
+from backend.routes.auth import login_required
+from backend.utils.redis_cache import get_cache
 
 # 初始化蓝图
 bp = Blueprint('articles', __name__)
@@ -89,21 +89,20 @@ def get_articles():
         params.extend([limit, offset])
         
         # 执行查询
-        with db_session() as conn:
-            conn.execute(sql, params)
-            rows = conn.fetchall()
+        with db_session() as conn, conn.cursor() as cur:
+            cur.execute(sql, params)
+            rows = cur.fetchall()
             
             # 获取总数
             count_sql = "SELECT COUNT(*) FROM articles"
             if conditions:
                 count_sql += " WHERE " + " AND ".join(conditions)
                 count_params = params[:-2]  # 排除limit和offset
-                conn.execute(count_sql, count_params)
+                cur.execute(count_sql, count_params)
             else:
-                conn.execute(count_sql)
-                count_params = []
+                cur.execute(count_sql)
                 
-            total = conn.fetchone()[0]
+            total = cur.fetchone()[0]
         
         # 准备响应数据
         response_data = {
@@ -172,9 +171,9 @@ def get_article_detail(article_id: int):
         WHERE id = %s
         """
         
-        with db_session() as conn:
-            conn.execute(sql, (article_id,))
-            article = conn.fetchone()
+        with db_session() as conn, conn.cursor() as cur:
+            cur.execute(sql, (article_id,))
+            article = cur.fetchone()
         
         if not article:
             return jsonify({"error": "文章不存在"}), 404

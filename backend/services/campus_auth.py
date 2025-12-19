@@ -9,7 +9,7 @@ from urllib.parse import urljoin
 
 import requests
 
-from api.services.exceptions import InvalidCredentialsError
+from backend.services.exceptions import InvalidCredentialsError
 
 
 hidden_input_pattern = re.compile(r'(?is)<input\b[^>]*type\s*=\s*(?:\'hidden\'|"hidden"|hidden)[^>]*>')

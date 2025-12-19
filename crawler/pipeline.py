@@ -19,7 +19,7 @@ import datetime
 import time
 from typing import List
 
-from config.config import Config
+from crawler.config import Config
 from crawler.embeddings import Embedder
 from crawler.fetcher import fetch_detail, fetch_list
 from crawler.models import ArticleRecord, ArticleMeta

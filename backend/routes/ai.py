@@ -6,15 +6,14 @@
 from __future__ import annotations
 
 import logging
-import os
 from typing import Any
 
 from flask import Blueprint, jsonify, request
 import requests
 
-from crawler.db import db_session
-from api.routes.auth import login_required
-from config.config import Config
+from backend.db import db_session
+from backend.routes.auth import login_required
+from backend.config import Config
 
 # 初始化蓝图
 bp = Blueprint('ai', __name__)
@@ -91,9 +90,9 @@ def search_similar_articles(query_embedding: list[float], top_k: int = 3) -> lis
         """
         
         # 3. 执行查询
-        with db_session() as conn:
-            conn.execute(sql, (vector_str, top_k))
-            results = conn.fetchall()
+        with db_session() as conn, conn.cursor() as cur:
+            cur.execute(sql, (vector_str, top_k))
+            results = cur.fetchall()
         
         # 转换结果
         articles = []

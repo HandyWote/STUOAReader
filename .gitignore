@@ -20,8 +20,5 @@ test_crawler_components.py
 test_db_connection.py
 test_output.py
 .env
-docker-compose.yml
-Dockerfile
-.dockerignore
-api.log
+*.log
 example
