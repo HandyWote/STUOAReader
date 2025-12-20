@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>OA Reader - Final Prototype</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Smooth Transitions */
+        .slide-up-enter-active, .slide-up-leave-active { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .slide-up-enter-from, .slide-up-leave-to { transform: translateY(100%); }
+
+        /* Glassmorphism */
+        .glass-nav {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-top: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        
+        /* Line Clamp for summary */
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased selection:bg-blue-100" 
+      x-data="appData()" x-init="initApp()">
+
+    <!-- === 登录页 === -->
+    <div x-show="!isLoggedIn" x-transition.opacity.duration.500ms 
+         class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white px-6">
+        <div class="mb-8 p-5 bg-blue-50 rounded-2xl shadow-inner">
+            <i class="ph-fill ph-read-cv-logo text-5xl text-blue-600"></i>
+        </div>
+        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">OA Reader</h1>
+        <p class="text-slate-400 mt-2 mb-12 text-center text-sm">每日增量抓取 · AI 智能摘要</p>
+        
+        <button @click="login()" 
+                class="w-full max-w-xs bg-slate-900 text-white py-4 rounded-xl font-medium shadow-xl shadow-slate-200 hover:bg-slate-800 transform active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+            <i class="ph-bold ph-fingerprint-simple"></i> SSO 快速登录
+        </button>
+    </div>
+
+    <!-- === 主应用区域 === -->
+    <div x-show="isLoggedIn" class="pb-24 max-w-md mx-auto relative min-h-screen bg-slate-50 shadow-2xl overflow-hidden border-x border-slate-100">
+        
+        <!-- 顶部导航 -->
+        <div class="sticky top-0 z-30 pt-12 pb-3 px-6 bg-slate-50/95 backdrop-blur-sm flex justify-between items-end border-b border-transparent transition-colors duration-300"
+             :class="{'border-slate-200': isScrolled}">
+            <div>
+                <h2 class="text-2xl font-bold text-slate-900" x-text="pageTitle"></h2>
+                <p class="text-xs text-slate-500 font-medium mt-1" x-show="currentTab === 'home'" x-text="currentDate"></p>
+            </div>
+            <!-- 首页显示通知铃铛 -->
+            <div x-show="currentTab === 'home'" class="flex gap-3">
+                <button class="relative p-2 rounded-full active:bg-slate-200 transition">
+                    <i class="ph-bold ph-bell text-xl text-slate-600"></i>
+                    <span class="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 1. 首页: 文章列表 -->
+        <div x-show="currentTab === 'home'" 
+             @scroll.window="isScrolled = (window.pageYOffset > 20)"
+             x-transition:enter="transition ease-out duration-300" 
+             x-transition:enter-start="opacity-0 translate-y-4" 
+             class="px-4 space-y-4 pt-2">
+            
+            <template x-for="article in articles" :key="article.id">
+                <div @click="openArticle(article)" 
+                     class="bg-white p-5 rounded-2xl shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] border border-slate-100 active:scale-[0.98] transition-all duration-200 cursor-pointer relative overflow-hidden group">
+                    
+                    <!-- 未读蓝点 -->
+                    <div x-show="!article.read" class="absolute top-5 right-5 w-2 h-2 bg-blue-600 rounded-full"></div>
+
+                    <div class="flex flex-col gap-2.5">
+                        <!-- Meta -->
+                        <div class="flex items-center gap-2 text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
+                            <span class="text-blue-600" x-text="article.unit"></span>
+                            <span>•</span>
+                            <span x-text="article.time"></span>
+                        </div>
+                        
+                        <!-- Title -->
+                        <h3 class="text-[17px] font-bold text-slate-800 leading-snug pr-4" x-text="article.title"></h3>
+                        
+                        <!-- AI Summary Preview (2 Lines) -->
+                        <div class="mt-1 flex gap-3 items-start">
+                            <div class="w-0.5 h-8 bg-blue-200 rounded-full mt-1 shrink-0"></div>
+                            <p class="text-[13px] text-slate-500 line-clamp-2 leading-relaxed" x-text="article.summary"></p>
+                        </div>
+                        
+                        <!-- Footer Info -->
+                        <div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-50">
+                            <div class="flex items-center gap-1.5 text-xs text-slate-400">
+                                <i class="ph-bold ph-paperclip rotate-45"></i>
+                                <span x-text="article.attachments + ' 附件'"></span>
+                            </div>
+                            <div class="text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-medium flex items-center gap-1">
+                                查看详情 <i class="ph-bold ph-caret-right"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+            
+            <div class="text-center py-10 text-xs text-slate-300 flex items-center justify-center gap-2">
+                <span class="w-1 h-1 bg-slate-300 rounded-full"></span>
+                已加载全部
+                <span class="w-1 h-1 bg-slate-300 rounded-full"></span>
+            </div>
+        </div>
+
+        <!-- 2. AI 问答页 -->
+        <div x-show="currentTab === 'ai'" class="flex flex-col h-[calc(100vh-140px)]">
+            <div class="flex-1 overflow-y-auto px-4 py-4 space-y-6 no-scrollbar" id="chatContainer">
+                
+                <!-- Welcome -->
+                <div class="flex flex-col items-center justify-center py-8 text-center" x-show="chatHistory.length === 0">
+                    <div class="w-12 h-12 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center mb-4">
+                        <i class="ph-fill ph-sparkle text-2xl text-blue-600"></i>
+                    </div>
+                    <p class="text-slate-900 font-medium">OA 智能助手</p>
+                    <p class="text-xs text-slate-400 mt-1 max-w-[200px]">已学习今日数据，您可以询问关于财务、放假或会议的安排。</p>
+                </div>
+
+                <template x-for="msg in chatHistory">
+                    <div class="flex gap-3 w-full animate-fade-in-up" :class="msg.isUser ? 'justify-end' : 'justify-start'">
+                        <div class="p-4 rounded-2xl shadow-sm max-w-[85%] text-[14px] leading-6"
+                             :class="msg.isUser ? 'bg-slate-900 text-white rounded-br-none' : 'bg-white text-slate-700 border border-slate-100 rounded-bl-none'">
+                            <p x-html="msg.text"></p>
+                        </div>
+                    </div>
+                </template>
+                
+                <!-- Thinking State -->
+                <div x-show="isThinking" class="flex gap-3">
+                    <div class="bg-white px-4 py-3 rounded-2xl rounded-bl-none border border-slate-100 flex items-center gap-1 shadow-sm">
+                        <div class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce"></div>
+                        <div class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                        <div class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Input Bar -->
+            <div class="px-4 py-3 bg-slate-50">
+                <div class="relative flex items-center shadow-lg rounded-full bg-white">
+                    <input type="text" x-model="chatInput" @keydown.enter="sendChat" 
+                           placeholder="问问今天有什么新通知..." 
+                           class="w-full bg-transparent text-slate-700 text-sm rounded-full pl-5 pr-12 py-4 focus:outline-none">
+                    <button @click="sendChat" class="absolute right-2 w-10 h-10 bg-slate-100 rounded-full hover:bg-blue-600 hover:text-white transition-colors text-slate-600 flex items-center justify-center">
+                        <i class="ph-bold ph-arrow-up"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. 设置页 -->
+        <div x-show="currentTab === 'settings'" class="px-4 py-4 space-y-6">
+            <!-- User Card -->
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
+                <div class="w-14 h-14 bg-gradient-to-tr from-blue-100 to-indigo-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-xl">
+                    ZS
+                </div>
+                <div>
+                    <h3 class="font-bold text-lg text-slate-900">张三</h3>
+                    <p class="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md inline-block">信息技术部</p>
+                </div>
+            </div>
+
+            <!-- Model Switcher (Requirement Met) -->
+            <div class="space-y-3">
+                <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-2">模型配置</h4>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="p-4 flex items-center justify-between border-b border-slate-50 last:border-0">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                                <i class="ph-bold ph-robot"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-slate-800">自定义 AI 模型</p>
+                                <p class="text-[10px] text-slate-400">使用个人 API Key 代理请求</p>
+                            </div>
+                        </div>
+                        <!-- Toggle Switch -->
+                        <button @click="customAI = !customAI" 
+                                class="w-12 h-7 rounded-full transition-colors relative focus:outline-none" 
+                                :class="customAI ? 'bg-blue-600' : 'bg-slate-200'">
+                            <span class="absolute top-1 left-1 bg-white w-5 h-5 rounded-full transition-transform shadow-sm" 
+                                  :class="customAI ? 'translate-x-5' : ''"></span>
+                        </button>
+                    </div>
+
+                    <!-- Collapsible Config Area -->
+                    <div x-show="customAI" x-transition class="bg-slate-50/50 p-4 space-y-3 border-t border-slate-100">
+                        <div>
+                            <label class="text-[10px] font-semibold text-slate-500 mb-1.5 block">BASE URL</label>
+                            <input type="text" value="https://api.deepseek.com" class="w-full text-xs bg-white border border-slate-200 rounded-lg px-3 py-2.5 focus:border-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-semibold text-slate-500 mb-1.5 block">API KEY</label>
+                            <input type="password" value="sk-xxxxxxxx" class="w-full text-xs bg-white border border-slate-200 rounded-lg px-3 py-2.5 focus:border-blue-500 outline-none">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button @click="logout" class="w-full py-4 text-red-500 bg-white border border-slate-100 rounded-2xl font-medium text-sm shadow-sm">退出登录</button>
+        </div>
+
+        <!-- 底部导航栏 -->
+        <div class="fixed bottom-0 w-full max-w-md glass-nav pb-8 pt-3 px-6 flex justify-around items-center z-40">
+            <button @click="switchTab('home')" class="flex flex-col items-center gap-1 w-16 group">
+                <i class="text-2xl transition-all duration-300" :class="currentTab === 'home' ? 'ph-fill ph-house text-slate-900' : 'ph-bold ph-house text-slate-400 group-hover:text-slate-600'"></i>
+                <span class="text-[10px] font-medium transition-colors" :class="currentTab === 'home' ? 'text-slate-900' : 'text-slate-400'">今日</span>
+            </button>
+            
+            <button @click="switchTab('ai')" class="flex flex-col items-center gap-1 w-16 group">
+                <div class="relative">
+                    <i class="text-2xl transition-all duration-300" :class="currentTab === 'ai' ? 'ph-fill ph-chat-circle-dots text-slate-900' : 'ph-bold ph-chat-circle-dots text-slate-400 group-hover:text-slate-600'"></i>
+                    <span class="absolute -top-0.5 -right-0.5 w-2 h-2 bg-blue-500 rounded-full border border-white" x-show="currentTab !== 'ai'"></span>
+                </div>
+                <span class="text-[10px] font-medium transition-colors" :class="currentTab === 'ai' ? 'text-slate-900' : 'text-slate-400'">问答</span>
+            </button>
+            
+            <button @click="switchTab('settings')" class="flex flex-col items-center gap-1 w-16 group">
+                <i class="text-2xl transition-all duration-300" :class="currentTab === 'settings' ? 'ph-fill ph-gear text-slate-900' : 'ph-bold ph-gear text-slate-400 group-hover:text-slate-600'"></i>
+                <span class="text-[10px] font-medium transition-colors" :class="currentTab === 'settings' ? 'text-slate-900' : 'text-slate-400'">设置</span>
+            </button>
+        </div>
+
+        <!-- === 文章详情弹窗 === -->
+        <div x-show="activeArticle" style="display: none;" 
+             class="fixed inset-0 z-50 flex items-end sm:items-center justify-center pointer-events-none">
+            
+            <!-- 遮罩 -->
+            <div x-show="activeArticle" x-transition.opacity @click="closeArticle"
+                 class="absolute inset-0 bg-slate-900/20 backdrop-blur-sm pointer-events-auto"></div>
+            
+            <!-- 弹窗内容 -->
+            <div x-show="activeArticle" 
+                 x-transition:enter="slide-up-enter-active" x-transition:enter-start="slide-up-enter-from"
+                 x-transition:leave="slide-up-leave-active" x-transition:leave-to="slide-up-leave-to"
+                 class="bg-white w-full max-w-md h-[92vh] rounded-t-[32px] sm:rounded-[32px] pointer-events-auto overflow-hidden flex flex-col relative shadow-2xl">
+                
+                <!-- 顶部手柄条 -->
+                <div class="absolute top-0 w-full h-12 flex justify-center items-center z-20 bg-gradient-to-b from-white to-transparent" @click="closeArticle">
+                    <div class="w-12 h-1.5 bg-slate-200 rounded-full"></div>
+                </div>
+
+                <!-- 滚动区域 -->
+                <div class="overflow-y-auto h-full bg-white relative">
+                    <template x-if="activeArticle">
+                        <div class="px-6 pt-12 pb-24">
+                            <!-- Header -->
+                            <div class="mb-6">
+                                <span class="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider uppercase mb-3 inline-block" x-text="activeArticle.unit"></span>
+                                <h1 class="text-2xl font-bold text-slate-900 leading-snug tracking-tight mb-2" x-text="activeArticle.title"></h1>
+                                <p class="text-xs text-slate-400" x-text="'发布于 ' + activeArticle.published_at"></p>
+                            </div>
+
+                            <!-- AI Summary Block -->
+                            <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-5 mb-8 border border-blue-100/50">
+                                <div class="flex items-center gap-2 mb-2 text-blue-700">
+                                    <i class="ph-fill ph-magic-wand"></i>
+                                    <span class="text-xs font-bold uppercase tracking-wide">AI 摘要</span>
+                                </div>
+                                <p class="text-[15px] leading-7 text-slate-700 text-justify" x-text="activeArticle.fullSummary"></p>
+                            </div>
+
+                            <!-- Content -->
+                            <div class="prose prose-slate prose-sm max-w-none text-slate-600 leading-7">
+                                <p>各部门、各单位：</p>
+                                <p>根据年度工作安排，现将有关事项通知如下。请各单位高度重视，认真组织学习...</p>
+                                <div class="w-full h-32 bg-slate-50 rounded-lg flex items-center justify-center text-slate-300 text-xs my-4 border border-dashed border-slate-200">
+                                    [ 正文内容预览区域 ]
+                                </div>
+                                <p>一、总体要求。<br>深入贯彻落实集团战略部署...</p>
+                            </div>
+
+                            <!-- Attachments (Simplified - Download Icon Only) -->
+                            <div class="mt-10 pt-6 border-t border-slate-100">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h4 class="text-sm font-bold text-slate-900">附件文档</h4>
+                                    <span class="text-xs text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full" x-text="activeArticle.attachments + ' 个文件'"></span>
+                                </div>
+                                
+                                <div class="space-y-3">
+                                    <!-- Attachment Item 1 -->
+                                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 group">
+                                        <div class="flex items-center gap-3 overflow-hidden pr-2">
+                                            <div class="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-slate-400 shadow-sm border border-slate-50 shrink-0">
+                                                <i class="ph-bold ph-file-pdf"></i>
+                                            </div>
+                                            <div class="flex flex-col min-w-0">
+                                                <p class="text-[13px] font-medium text-slate-700 truncate w-48">2025年度实施方案.pdf</p>
+                                                <p class="text-[10px] text-slate-400">2.4 MB</p>
+                                            </div>
+                                        </div>
+                                        <button class="w-9 h-9 rounded-full bg-slate-900 text-white flex items-center justify-center shadow-md active:scale-90 transition-transform">
+                                            <i class="ph-bold ph-download-simple"></i>
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Attachment Item 2 -->
+                                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 group">
+                                        <div class="flex items-center gap-3 overflow-hidden pr-2">
+                                            <div class="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-slate-400 shadow-sm border border-slate-50 shrink-0">
+                                                <i class="ph-bold ph-file-doc"></i>
+                                            </div>
+                                            <div class="flex flex-col min-w-0">
+                                                <p class="text-[13px] font-medium text-slate-700 truncate w-48">附件：任务分解表.docx</p>
+                                                <p class="text-[10px] text-slate-400">540 KB</p>
+                                            </div>
+                                        </div>
+                                        <button class="w-9 h-9 rounded-full bg-slate-900 text-white flex items-center justify-center shadow-md active:scale-90 transition-transform">
+                                            <i class="ph-bold ph-download-simple"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </template>
+                </div>
+                
+                <!-- 底部关闭按钮（悬浮） -->
+                <div class="absolute bottom-6 left-0 w-full flex justify-center pointer-events-none">
+                    <button @click="closeArticle" class="pointer-events-auto bg-slate-900/90 text-white px-6 py-2.5 rounded-full text-sm font-medium shadow-lg backdrop-blur hover:bg-slate-800 transition transform active:scale-95">
+                        关闭阅读
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function appData() {
+            return {
+                isLoggedIn: false,
+                currentTab: 'home',
+                isScrolled: false,
+                pageTitle: '今日摘要',
+                currentDate: new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' }),
+                activeArticle: null,
+                chatInput: '',
+                chatHistory: [],
+                isThinking: false,
+                customAI: false,
+                articles: [
+                    {
+                        id: 1,
+                        title: '关于印发《2025年度信息化建设实施方案》的通知',
+                        unit: '信息技术部',
+                        time: '10:30',
+                        published_at: '2025-12-20',
+                        summary: '核心：明确2025年三大系统升级计划。重点：1. 启动新ERP选型；2. 全面推行数据资产入表；3. 要求Q1完成API接口改造。',
+                        fullSummary: '本通知详细规划了2025年度公司信息化建设路径。核心要点包括：1. 启动新一代ERP系统选型；2. 全面推行数据资产入表工作；3. 要求各业务单元在Q1完成现有系统API接口的标准化改造。文件同时强调了网络安全责任制，违规操作将纳入年度绩效考核。',
+                        read: false,
+                        attachments: 2
+                    },
+                    {
+                        id: 2,
+                        title: '关于开展年终财务决算工作的紧急通知',
+                        unit: '财务部',
+                        time: '09:15',
+                        published_at: '2025-12-20',
+                        summary: '要求各部门于12月25日前完成报销，暂停非紧急对外付款。',
+                        fullSummary: '财务部发布年终决算紧急事项：所有费用报销需在12月25日17:00前提交完毕，逾期计入明年费用。即日起暂停非紧急合同付款。各部门需盘点固定资产，并在月底前提交盘点报告。',
+                        read: true,
+                        attachments: 1
+                    },
+                    {
+                        id: 3,
+                        title: '行政部关于元旦放假及值班安排的公告',
+                        unit: '行政部',
+                        time: '08:40',
+                        published_at: '2025-12-20',
+                        summary: '元旦放假时间为1月1日（周三），不调休。',
+                        fullSummary: '元旦放假安排确认：1月1日（周三）放假一天，不进行调休。各部门需在12月28日前提交值班表。放假离开办公室前请务必关闭电源、锁好门窗。',
+                        read: true,
+                        attachments: 0
+                    }
+                ],
+
+                initApp() {
+                    // Check local storage logic
+                },
+
+                login() {
+                    // Simulate Login
+                    setTimeout(() => {
+                        this.isLoggedIn = true;
+                    }, 600);
+                },
+                
+                logout() {
+                    this.isLoggedIn = false;
+                    this.currentTab = 'home';
+                },
+
+                switchTab(tab) {
+                    this.currentTab = tab;
+                    if (tab === 'home') this.pageTitle = '今日摘要';
+                    if (tab === 'ai') this.pageTitle = 'AI 助手';
+                    if (tab === 'settings') this.pageTitle = '设置';
+                    window.scrollTo(0, 0);
+                },
+
+                openArticle(article) {
+                    this.activeArticle = article;
+                    article.read = true; // Mark as read
+                },
+
+                closeArticle() {
+                    this.activeArticle = null;
+                },
+
+                sendChat() {
+                    if (!this.chatInput.trim()) return;
+                    
+                    const userMsg = this.chatInput;
+                    this.chatHistory.push({ isUser: true, text: userMsg });
+                    this.chatInput = '';
+                    this.isThinking = true;
+                    
+                    this.$nextTick(() => {
+                        const container = document.getElementById('chatContainer');
+                        container.scrollTop = container.scrollHeight;
+                    });
+
+                    setTimeout(() => {
+                        this.isThinking = false;
+                        let responseText = "";
+                        if (userMsg.includes("财务")) {
+                            responseText = "财务部要求在<b>12月25日</b>前完成所有报销，并暂停了非紧急付款。";
+                        } else if (userMsg.includes("放假")) {
+                            responseText = "元旦放假时间是<b>1月1日</b>，仅放假一天，不调休。";
+                        } else {
+                            responseText = "为您检索到：重点在于<b>信息化建设</b>和<b>年终决算</b>。需要我详细解读《2025信息化实施方案》吗？";
+                        }
+                        
+                        this.chatHistory.push({ isUser: false, text: responseText });
+                        
+                        this.$nextTick(() => {
+                            const container = document.getElementById('chatContainer');
+                            container.scrollTop = container.scrollHeight;
+                        });
+                    }, 1200);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
