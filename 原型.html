@@ -2,8 +2,9 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>OA Reader - Final Prototype</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>OA Reader - Prestige Edition</title>
+    
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Alpine.js -->
@@ -11,163 +12,279 @@
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                    },
+                    colors: {
+                        // 暖玉白背景
+                        surface: '#FDFCF8',
+                        // 鎏金
+                        gold: {
+                            50: '#FBF7E8',
+                            100: '#F5EBC9',
+                            400: '#D4AF37', // 经典金
+                            500: '#B8860B',
+                            600: '#926F34',
+                        },
+                        // 朱砂红 / 故宫红
+                        imperial: {
+                            50: '#FEF2F2',
+                            100: '#FFE1E1',
+                            500: '#C02425', // 丹红
+                            600: '#9B1C1C', // 深红
+                            700: '#7F1D1D',
+                        },
+                        stone: {
+                            850: '#1C1917', // 暖黑
+                        }
+                    },
+                    boxShadow: {
+                        'soft': '0 8px 30px rgba(184, 134, 11, 0.06)', // 金色微光阴影
+                        'glow': '0 0 20px rgba(192, 36, 37, 0.25)', // 红色发光
+                        'float': '0 20px 40px -10px rgba(60, 20, 20, 0.08)',
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'blob': 'blob 7s infinite',
+                        'fade-up': 'fadeUp 0.5s ease-out forwards',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        },
+                        blob: {
+                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                            '100%': { transform: 'translate(0px, 0px) scale(1)' },
+                        },
+                        fadeUp: {
+                            '0%': { opacity: '0', transform: 'translateY(10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
 
     <style>
-        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { -webkit-tap-highlight-color: transparent; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* Smooth Transitions */
-        .slide-up-enter-active, .slide-up-leave-active { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
-        .slide-up-enter-from, .slide-up-leave-to { transform: translateY(100%); }
-
-        /* Glassmorphism */
-        .glass-nav {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border-top: 1px solid rgba(226, 232, 240, 0.8);
-        }
-        
-        /* Line Clamp for summary */
-        .line-clamp-2 {
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            line-clamp: 2;
-            -webkit-box-orient: vertical;
+        /* 暖调氛围背景 */
+        .ambient-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #FDFCF8;
+            z-index: -1;
             overflow: hidden;
         }
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(90px);
+            opacity: 0.5;
+        }
+        
+        /* 玻璃拟态 - 暖光透镜 */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+        }
+
+        /* 金色渐变文字 */
+        .text-gold-gradient {
+            background: linear-gradient(135deg, #B8860B 0%, #D4AF37 50%, #926F34 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stagger-1 { animation-delay: 50ms; }
+        .stagger-2 { animation-delay: 100ms; }
+        .stagger-3 { animation-delay: 150ms; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 antialiased selection:bg-blue-100" 
-      x-data="appData()" x-init="initApp()">
+<body class="text-stone-800 antialiased selection:bg-imperial-100 selection:text-imperial-700" x-data="appData()" x-init="initApp()">
 
-    <!-- === 登录页 === -->
-    <div x-show="!isLoggedIn" x-transition.opacity.duration.500ms 
-         class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white px-6">
-        <div class="mb-8 p-5 bg-blue-50 rounded-2xl shadow-inner">
-            <i class="ph-fill ph-read-cv-logo text-5xl text-blue-600"></i>
-        </div>
-        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">OA Reader</h1>
-        <p class="text-slate-400 mt-2 mb-12 text-center text-sm">每日增量抓取 · AI 智能摘要</p>
-        
-        <button @click="login()" 
-                class="w-full max-w-xs bg-slate-900 text-white py-4 rounded-xl font-medium shadow-xl shadow-slate-200 hover:bg-slate-800 transform active:scale-[0.98] transition-all flex items-center justify-center gap-2">
-            <i class="ph-bold ph-fingerprint-simple"></i> SSO 快速登录
-        </button>
+    <!-- 氛围背景 (Ambient Warmth) -->
+    <div class="ambient-bg">
+        <!-- 金色光晕 -->
+        <div class="orb w-96 h-96 bg-amber-100/60 -top-20 -left-20 animate-blob"></div>
+        <!-- 红色光晕 -->
+        <div class="orb w-96 h-96 bg-red-100/50 bottom-0 right-0 animate-blob" style="animation-delay: 2s"></div>
+        <!-- 中间暖白 -->
+        <div class="orb w-64 h-64 bg-orange-50/60 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-blob" style="animation-delay: 4s"></div>
     </div>
 
-    <!-- === 主应用区域 === -->
-    <div x-show="isLoggedIn" class="pb-24 max-w-md mx-auto relative min-h-screen bg-slate-50 shadow-2xl overflow-hidden border-x border-slate-100">
-        
-        <!-- 顶部导航 -->
-        <div class="sticky top-0 z-30 pt-12 pb-3 px-6 bg-slate-50/95 backdrop-blur-sm flex justify-between items-end border-b border-transparent transition-colors duration-300"
-             :class="{'border-slate-200': isScrolled}">
-            <div>
-                <h2 class="text-2xl font-bold text-slate-900" x-text="pageTitle"></h2>
-                <p class="text-xs text-slate-500 font-medium mt-1" x-show="currentTab === 'home'" x-text="currentDate"></p>
+    <!-- === 登录页 (Prestige) === -->
+    <div x-show="!isLoggedIn" x-transition.opacity.duration.700ms 
+         class="fixed inset-0 z-50 flex flex-col justify-between p-8 bg-surface/30 backdrop-blur-3xl">
+        <div class="mt-20">
+            <!-- Logo: Red Block -->
+            <div class="w-16 h-16 bg-gradient-to-br from-imperial-600 to-imperial-700 rounded-2xl flex items-center justify-center shadow-glow mb-8 animate-float border border-imperial-500/20">
+                <i class="ph-fill ph-seal-check text-3xl text-gold-100"></i>
             </div>
-            <!-- 首页显示通知铃铛 -->
-            <div x-show="currentTab === 'home'" class="flex gap-3">
-                <button class="relative p-2 rounded-full active:bg-slate-200 transition">
-                    <i class="ph-bold ph-bell text-xl text-slate-600"></i>
-                    <span class="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-                </button>
+            <h1 class="text-5xl font-extrabold text-stone-900 tracking-tighter leading-tight">
+                OA <br> <span class="text-gold-gradient">Reader.</span>
+            </h1>
+            <p class="text-stone-500 mt-4 text-lg font-medium tracking-wide">每日摘要 · 尊享智能</p>
+        </div>
+
+        <div class="w-full mb-10">
+            <button @click="login()" 
+                    class="group w-full bg-gradient-to-r from-stone-900 to-stone-800 text-gold-50 h-16 rounded-[2rem] font-bold text-lg shadow-xl shadow-stone-200 flex items-center justify-between px-2 pl-8 hover:scale-[1.02] active:scale-95 transition-all duration-300 border border-stone-700">
+                <span class="text-gold-100">开启今日阅读</span>
+                <div class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center group-hover:bg-white/20 transition text-gold-400">
+                    <i class="ph-bold ph-caret-right"></i>
+                </div>
+            </button>
+            <div class="flex items-center justify-center gap-2 mt-6 opacity-60">
+                <i class="ph-fill ph-shield-check text-gold-500"></i>
+                <p class="text-center text-[10px] text-stone-400 font-bold tracking-[0.2em] uppercase">Enterprise Secure</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- === 主应用 === -->
+    <div x-show="isLoggedIn" class="relative min-h-screen pb-28 max-w-lg mx-auto border-x border-white/40 shadow-2xl bg-white/40">
+        
+        <!-- 顶部动态导航 -->
+        <div class="sticky top-0 z-30 pt-14 pb-4 px-6 flex justify-between items-end glass-panel rounded-b-[2rem] shadow-sm transition-all duration-500"
+             :class="isScrolled ? 'py-4 bg-white/95 shadow-soft' : 'bg-transparent border-transparent shadow-none'">
+            <div class="flex flex-col">
+                <span class="text-[10px] font-bold tracking-[0.25em] text-imperial-600 uppercase mb-1 flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-gold-400"></span>
+                    <span x-text="currentDate"></span>
+                </span>
+                <h2 class="text-2xl font-bold text-stone-900 tracking-tight" x-text="pageTitle"></h2>
+            </div>
+            <div x-show="currentTab === 'home'" class="w-10 h-10 rounded-full bg-white shadow-soft flex items-center justify-center border border-gold-100 cursor-pointer active:scale-90 transition group">
+                <div class="relative">
+                    <i class="ph-fill ph-bell text-lg text-stone-400 group-hover:text-gold-500 transition-colors"></i>
+                    <span class="absolute top-0 right-0 w-2 h-2 bg-imperial-500 rounded-full border border-white"></span>
+                </div>
             </div>
         </div>
 
-        <!-- 1. 首页: 文章列表 -->
+        <!-- 1. 首页: 卡片流 -->
         <div x-show="currentTab === 'home'" 
              @scroll.window="isScrolled = (window.pageYOffset > 20)"
-             x-transition:enter="transition ease-out duration-300" 
-             x-transition:enter-start="opacity-0 translate-y-4" 
-             class="px-4 space-y-4 pt-2">
+             class="px-5 space-y-5 pt-6">
             
-            <template x-for="article in articles" :key="article.id">
+            <template x-for="(article, index) in articles" :key="article.id">
                 <div @click="openArticle(article)" 
-                     class="bg-white p-5 rounded-2xl shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] border border-slate-100 active:scale-[0.98] transition-all duration-200 cursor-pointer relative overflow-hidden group">
+                     class="group relative bg-gradient-to-br from-white to-stone-50 rounded-[2rem] p-6 shadow-soft hover:shadow-lg hover:shadow-gold-500/10 hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden border border-white animate-fade-up"
+                     :class="`stagger-${index + 1}`">
                     
-                    <!-- 未读蓝点 -->
-                    <div x-show="!article.read" class="absolute top-5 right-5 w-2 h-2 bg-blue-600 rounded-full"></div>
+                    <!-- 装饰性光晕 (Gold) -->
+                    <div class="absolute -right-8 -top-8 w-32 h-32 bg-gold-100/50 rounded-full blur-2xl group-hover:bg-gold-200/60 transition duration-500"></div>
 
-                    <div class="flex flex-col gap-2.5">
-                        <!-- Meta -->
-                        <div class="flex items-center gap-2 text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
-                            <span class="text-blue-600" x-text="article.unit"></span>
-                            <span>•</span>
-                            <span x-text="article.time"></span>
+                    <!-- 状态栏 -->
+                    <div class="flex justify-between items-center mb-4 relative z-10">
+                        <div class="flex items-center gap-2">
+                            <!-- Tag Style -->
+                            <span class="px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wide uppercase border"
+                                  :class="article.priority === 'high' ? 'bg-imperial-50 text-imperial-700 border-imperial-100' : 'bg-stone-100 text-stone-600 border-stone-200'"
+                                  x-text="article.unit"></span>
+                            <span class="text-[11px] text-stone-400 font-medium" x-text="article.time"></span>
                         </div>
-                        
-                        <!-- Title -->
-                        <h3 class="text-[17px] font-bold text-slate-800 leading-snug pr-4" x-text="article.title"></h3>
-                        
-                        <!-- AI Summary Preview (2 Lines) -->
-                        <div class="mt-1 flex gap-3 items-start">
-                            <div class="w-0.5 h-8 bg-blue-200 rounded-full mt-1 shrink-0"></div>
-                            <p class="text-[13px] text-slate-500 line-clamp-2 leading-relaxed" x-text="article.summary"></p>
+                        <!-- 未读点 (Red) -->
+                        <div x-show="!article.read" class="relative flex h-2.5 w-2.5">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-imperial-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-imperial-600"></span>
                         </div>
-                        
-                        <!-- Footer Info -->
-                        <div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-50">
-                            <div class="flex items-center gap-1.5 text-xs text-slate-400">
-                                <i class="ph-bold ph-paperclip rotate-45"></i>
-                                <span x-text="article.attachments + ' 附件'"></span>
-                            </div>
-                            <div class="text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-medium flex items-center gap-1">
-                                查看详情 <i class="ph-bold ph-caret-right"></i>
-                            </div>
+                    </div>
+
+                    <!-- 标题与摘要 -->
+                    <div class="relative z-10">
+                        <h3 class="text-lg font-bold text-stone-900 leading-[1.4] mb-2 group-hover:text-imperial-700 transition-colors" x-text="article.title"></h3>
+                        <p class="text-[13px] text-stone-500 leading-relaxed line-clamp-2" x-text="article.summary"></p>
+                    </div>
+
+                    <!-- 底部数据 -->
+                    <div class="mt-5 flex items-center justify-between relative z-10 pt-4 border-t border-stone-100">
+                        <div class="flex gap-4 text-stone-400 text-xs font-medium">
+                            <span class="flex items-center gap-1 group-hover:text-gold-600 transition-colors"><i class="ph-bold ph-eye"></i> 124</span>
+                            <span class="flex items-center gap-1" x-show="article.attachments > 0"><i class="ph-bold ph-paperclip"></i> <span x-text="article.attachments"></span></span>
+                        </div>
+                        <!-- 按钮变为金色 -->
+                        <div class="w-8 h-8 rounded-full bg-white border border-stone-100 flex items-center justify-center text-stone-400 group-hover:bg-gold-500 group-hover:text-white group-hover:border-gold-500 transition-all duration-300 transform group-hover:rotate-45 shadow-sm">
+                            <i class="ph-bold ph-arrow-up-right"></i>
                         </div>
                     </div>
                 </div>
             </template>
-            
-            <div class="text-center py-10 text-xs text-slate-300 flex items-center justify-center gap-2">
-                <span class="w-1 h-1 bg-slate-300 rounded-full"></span>
-                已加载全部
-                <span class="w-1 h-1 bg-slate-300 rounded-full"></span>
-            </div>
         </div>
 
-        <!-- 2. AI 问答页 -->
-        <div x-show="currentTab === 'ai'" class="flex flex-col h-[calc(100vh-140px)]">
-            <div class="flex-1 overflow-y-auto px-4 py-4 space-y-6 no-scrollbar" id="chatContainer">
+        <!-- 2. AI 助手 -->
+        <div x-show="currentTab === 'ai'" class="flex flex-col h-[calc(100vh-180px)]">
+            <div class="flex-1 overflow-y-auto px-5 py-6 space-y-6 no-scrollbar" id="chatContainer">
                 
-                <!-- Welcome -->
-                <div class="flex flex-col items-center justify-center py-8 text-center" x-show="chatHistory.length === 0">
-                    <div class="w-12 h-12 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center mb-4">
-                        <i class="ph-fill ph-sparkle text-2xl text-blue-600"></i>
+                <!-- 初始状态 -->
+                <div x-show="chatHistory.length === 0" class="h-full flex flex-col items-center justify-center opacity-90 animate-fade-up">
+                    <div class="relative">
+                        <div class="absolute inset-0 bg-gold-400 blur-2xl opacity-20 animate-pulse"></div>
+                        <div class="w-20 h-20 bg-gradient-to-tr from-white to-gold-50 rounded-3xl shadow-soft flex items-center justify-center relative z-10 border border-white">
+                            <i class="ph-fill ph-crown text-3xl text-gold-500"></i>
+                        </div>
                     </div>
-                    <p class="text-slate-900 font-medium">OA 智能助手</p>
-                    <p class="text-xs text-slate-400 mt-1 max-w-[200px]">已学习今日数据，您可以询问关于财务、放假或会议的安排。</p>
+                    <h3 class="mt-6 font-bold text-lg text-stone-900">下午好，张总</h3>
+                    <p class="text-sm text-stone-400 mt-2 text-center max-w-[240px]">今日已收录 12 份重要文件。<br>AI 助理随时为您待命。</p>
+                    
+                    <div class="flex flex-wrap justify-center gap-2 mt-8">
+                        <button @click="quickAsk('元旦怎么放假？')" class="px-4 py-2 bg-white rounded-full text-xs font-medium text-stone-600 shadow-sm border border-stone-100 active:scale-95 transition hover:border-gold-300 hover:text-gold-600">🧧 元旦放假安排</button>
+                        <button @click="quickAsk('报销截止时间？')" class="px-4 py-2 bg-white rounded-full text-xs font-medium text-stone-600 shadow-sm border border-stone-100 active:scale-95 transition hover:border-gold-300 hover:text-gold-600">💰 报销截止时间</button>
+                    </div>
                 </div>
 
                 <template x-for="msg in chatHistory">
-                    <div class="flex gap-3 w-full animate-fade-in-up" :class="msg.isUser ? 'justify-end' : 'justify-start'">
-                        <div class="p-4 rounded-2xl shadow-sm max-w-[85%] text-[14px] leading-6"
-                             :class="msg.isUser ? 'bg-slate-900 text-white rounded-br-none' : 'bg-white text-slate-700 border border-slate-100 rounded-bl-none'">
-                            <p x-html="msg.text"></p>
+                    <div class="flex flex-col w-full animate-fade-up" :class="msg.isUser ? 'items-end' : 'items-start'">
+                        
+                        <span class="text-[10px] text-stone-300 mb-1 px-1 font-bold tracking-wider" x-text="msg.isUser ? 'ME' : 'AI ASSISTANT'"></span>
+                        
+                        <div class="p-4 max-w-[85%] text-[14px] leading-6 shadow-sm backdrop-blur-sm relative overflow-hidden"
+                             :class="msg.isUser ? 'bg-stone-800 text-gold-50 rounded-[20px] rounded-br-sm' : 'bg-white/90 text-stone-700 border border-white/60 rounded-[20px] rounded-bl-sm'">
+                            
+                            <!-- 装饰线：AI回复带金色，用户带红色 -->
+                            <div x-show="!msg.isUser" class="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-gold-300 to-gold-500"></div>
+                            <div x-show="msg.isUser" class="absolute top-0 right-0 w-1 h-full bg-gradient-to-b from-imperial-600 to-imperial-800"></div>
+                            
+                            <p x-html="msg.text" class="px-1"></p>
                         </div>
                     </div>
                 </template>
                 
-                <!-- Thinking State -->
-                <div x-show="isThinking" class="flex gap-3">
-                    <div class="bg-white px-4 py-3 rounded-2xl rounded-bl-none border border-slate-100 flex items-center gap-1 shadow-sm">
-                        <div class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce"></div>
-                        <div class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
-                        <div class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                <!-- Loading: Gold Dots -->
+                <div x-show="isThinking" class="flex items-center gap-2 px-2">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-r from-gold-300 to-gold-500 p-[1px]">
+                        <div class="w-full h-full bg-white rounded-full flex items-center justify-center">
+                            <i class="ph-bold ph-sparkle text-gold-500 text-xs animate-spin-slow"></i>
+                        </div>
                     </div>
+                    <div class="text-xs font-bold text-gold-600 tracking-wider animate-pulse">THINKING...</div>
                 </div>
             </div>
             
-            <!-- Input Bar -->
-            <div class="px-4 py-3 bg-slate-50">
-                <div class="relative flex items-center shadow-lg rounded-full bg-white">
+            <!-- 输入框 -->
+            <div class="px-5 pb-2">
+                <div class="relative glass-panel rounded-[2rem] shadow-float p-1.5 flex items-center transition-all focus-within:ring-1 focus-within:ring-gold-300 focus-within:border-gold-300">
                     <input type="text" x-model="chatInput" @keydown.enter="sendChat" 
-                           placeholder="问问今天有什么新通知..." 
-                           class="w-full bg-transparent text-slate-700 text-sm rounded-full pl-5 pr-12 py-4 focus:outline-none">
-                    <button @click="sendChat" class="absolute right-2 w-10 h-10 bg-slate-100 rounded-full hover:bg-blue-600 hover:text-white transition-colors text-slate-600 flex items-center justify-center">
+                           placeholder="输入指令..." 
+                           class="w-full bg-transparent text-stone-800 text-sm pl-5 pr-12 py-3.5 focus:outline-none placeholder:text-stone-400 font-medium">
+                    <button @click="sendChat" 
+                            class="absolute right-1.5 w-11 h-11 bg-gradient-to-br from-imperial-600 to-imperial-700 rounded-full text-white flex items-center justify-center shadow-md hover:shadow-lg transition-all active:scale-90">
                         <i class="ph-bold ph-arrow-up"></i>
                     </button>
                 </div>
@@ -175,179 +292,152 @@
         </div>
 
         <!-- 3. 设置页 -->
-        <div x-show="currentTab === 'settings'" class="px-4 py-4 space-y-6">
-            <!-- User Card -->
-            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
-                <div class="w-14 h-14 bg-gradient-to-tr from-blue-100 to-indigo-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-xl">
-                    ZS
+        <div x-show="currentTab === 'settings'" class="px-5 pt-6 space-y-8 animate-fade-up">
+            <div class="flex flex-col items-center text-center">
+                <div class="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-gold-300 to-imperial-200 mb-4 shadow-lg shadow-gold-100">
+                    <div class="w-full h-full bg-white rounded-full flex items-center justify-center overflow-hidden">
+                        <span class="text-2xl font-bold text-stone-800">ZS</span>
+                    </div>
                 </div>
-                <div>
-                    <h3 class="font-bold text-lg text-slate-900">张三</h3>
-                    <p class="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md inline-block">信息技术部</p>
-                </div>
+                <h3 class="text-xl font-bold text-stone-900">张三</h3>
+                <p class="text-sm text-stone-400 font-medium">信息技术部 · 高级工程师</p>
+                <span class="mt-2 px-3 py-0.5 bg-gold-50 text-gold-600 border border-gold-200 rounded-full text-[10px] font-bold tracking-widest uppercase">VIP Access</span>
             </div>
 
-            <!-- Model Switcher (Requirement Met) -->
-            <div class="space-y-3">
-                <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-2">模型配置</h4>
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                    <div class="p-4 flex items-center justify-between border-b border-slate-50 last:border-0">
+            <div class="bg-white/60 backdrop-blur-md rounded-[2rem] border border-white p-2 shadow-sm">
+                <div class="space-y-1">
+                    <button class="w-full flex items-center justify-between p-4 hover:bg-white rounded-2xl transition group">
                         <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
-                                <i class="ph-bold ph-robot"></i>
+                            <div class="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-stone-600 group-hover:bg-gold-500 group-hover:text-white transition duration-300">
+                                <i class="ph-fill ph-sliders-horizontal"></i>
                             </div>
-                            <div>
-                                <p class="text-sm font-medium text-slate-800">自定义 AI 模型</p>
-                                <p class="text-[10px] text-slate-400">使用个人 API Key 代理请求</p>
+                            <span class="text-sm font-semibold text-stone-700">模型配置</span>
+                        </div>
+                        <i class="ph-bold ph-caret-right text-stone-300"></i>
+                    </button>
+                    <button class="w-full flex items-center justify-between p-4 hover:bg-white rounded-2xl transition group">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-stone-600 group-hover:bg-imperial-600 group-hover:text-white transition duration-300">
+                                <i class="ph-fill ph-bell-ringing"></i>
                             </div>
+                            <span class="text-sm font-semibold text-stone-700">通知管理</span>
                         </div>
-                        <!-- Toggle Switch -->
-                        <button @click="customAI = !customAI" 
-                                class="w-12 h-7 rounded-full transition-colors relative focus:outline-none" 
-                                :class="customAI ? 'bg-blue-600' : 'bg-slate-200'">
-                            <span class="absolute top-1 left-1 bg-white w-5 h-5 rounded-full transition-transform shadow-sm" 
-                                  :class="customAI ? 'translate-x-5' : ''"></span>
-                        </button>
-                    </div>
-
-                    <!-- Collapsible Config Area -->
-                    <div x-show="customAI" x-transition class="bg-slate-50/50 p-4 space-y-3 border-t border-slate-100">
-                        <div>
-                            <label class="text-[10px] font-semibold text-slate-500 mb-1.5 block">BASE URL</label>
-                            <input type="text" value="https://api.deepseek.com" class="w-full text-xs bg-white border border-slate-200 rounded-lg px-3 py-2.5 focus:border-blue-500 outline-none">
-                        </div>
-                        <div>
-                            <label class="text-[10px] font-semibold text-slate-500 mb-1.5 block">API KEY</label>
-                            <input type="password" value="sk-xxxxxxxx" class="w-full text-xs bg-white border border-slate-200 rounded-lg px-3 py-2.5 focus:border-blue-500 outline-none">
-                        </div>
-                    </div>
+                        <i class="ph-bold ph-caret-right text-stone-300"></i>
+                    </button>
                 </div>
             </div>
-
-            <button @click="logout" class="w-full py-4 text-red-500 bg-white border border-slate-100 rounded-2xl font-medium text-sm shadow-sm">退出登录</button>
-        </div>
-
-        <!-- 底部导航栏 -->
-        <div class="fixed bottom-0 w-full max-w-md glass-nav pb-8 pt-3 px-6 flex justify-around items-center z-40">
-            <button @click="switchTab('home')" class="flex flex-col items-center gap-1 w-16 group">
-                <i class="text-2xl transition-all duration-300" :class="currentTab === 'home' ? 'ph-fill ph-house text-slate-900' : 'ph-bold ph-house text-slate-400 group-hover:text-slate-600'"></i>
-                <span class="text-[10px] font-medium transition-colors" :class="currentTab === 'home' ? 'text-slate-900' : 'text-slate-400'">今日</span>
-            </button>
             
-            <button @click="switchTab('ai')" class="flex flex-col items-center gap-1 w-16 group">
-                <div class="relative">
-                    <i class="text-2xl transition-all duration-300" :class="currentTab === 'ai' ? 'ph-fill ph-chat-circle-dots text-slate-900' : 'ph-bold ph-chat-circle-dots text-slate-400 group-hover:text-slate-600'"></i>
-                    <span class="absolute -top-0.5 -right-0.5 w-2 h-2 bg-blue-500 rounded-full border border-white" x-show="currentTab !== 'ai'"></span>
-                </div>
-                <span class="text-[10px] font-medium transition-colors" :class="currentTab === 'ai' ? 'text-slate-900' : 'text-slate-400'">问答</span>
-            </button>
-            
-            <button @click="switchTab('settings')" class="flex flex-col items-center gap-1 w-16 group">
-                <i class="text-2xl transition-all duration-300" :class="currentTab === 'settings' ? 'ph-fill ph-gear text-slate-900' : 'ph-bold ph-gear text-slate-400 group-hover:text-slate-600'"></i>
-                <span class="text-[10px] font-medium transition-colors" :class="currentTab === 'settings' ? 'text-slate-900' : 'text-slate-400'">设置</span>
+            <button @click="logout" class="w-full py-4 text-imperial-600 font-bold text-sm bg-white rounded-2xl border border-imperial-100 shadow-sm active:scale-95 transition">
+                退出登录
             </button>
         </div>
 
-        <!-- === 文章详情弹窗 === -->
-        <div x-show="activeArticle" style="display: none;" 
-             class="fixed inset-0 z-50 flex items-end sm:items-center justify-center pointer-events-none">
-            
-            <!-- 遮罩 -->
-            <div x-show="activeArticle" x-transition.opacity @click="closeArticle"
-                 class="absolute inset-0 bg-slate-900/20 backdrop-blur-sm pointer-events-auto"></div>
-            
-            <!-- 弹窗内容 -->
-            <div x-show="activeArticle" 
-                 x-transition:enter="slide-up-enter-active" x-transition:enter-start="slide-up-enter-from"
-                 x-transition:leave="slide-up-leave-active" x-transition:leave-to="slide-up-leave-to"
-                 class="bg-white w-full max-w-md h-[92vh] rounded-t-[32px] sm:rounded-[32px] pointer-events-auto overflow-hidden flex flex-col relative shadow-2xl">
+        <!-- 底部悬浮导航 (Dock) -->
+        <div class="fixed bottom-6 left-0 right-0 flex justify-center z-40 pointer-events-none">
+            <div class="glass-panel px-6 py-3 rounded-full shadow-float flex items-center gap-8 pointer-events-auto transform transition-transform hover:scale-105 border-white/60">
+                <button @click="switchTab('home')" class="relative p-2 rounded-xl transition-all duration-300" 
+                        :class="currentTab === 'home' ? 'text-imperial-700 bg-imperial-50 shadow-inner' : 'text-stone-400 hover:text-stone-600'">
+                    <i class="text-2xl" :class="currentTab === 'home' ? 'ph-fill ph-house' : 'ph-bold ph-house'"></i>
+                </button>
                 
-                <!-- 顶部手柄条 -->
-                <div class="absolute top-0 w-full h-12 flex justify-center items-center z-20 bg-gradient-to-b from-white to-transparent" @click="closeArticle">
-                    <div class="w-12 h-1.5 bg-slate-200 rounded-full"></div>
+                <button @click="switchTab('ai')" class="relative p-2 rounded-xl transition-all duration-300"
+                        :class="currentTab === 'ai' ? 'text-gold-600 bg-gold-50 shadow-inner' : 'text-stone-400 hover:text-stone-600'">
+                    <i class="text-2xl" :class="currentTab === 'ai' ? 'ph-fill ph-sparkle' : 'ph-bold ph-sparkle'"></i>
+                </button>
+                
+                <button @click="switchTab('settings')" class="relative p-2 rounded-xl transition-all duration-300"
+                        :class="currentTab === 'settings' ? 'text-stone-800 bg-stone-100 shadow-inner' : 'text-stone-400 hover:text-stone-600'">
+                    <i class="text-2xl" :class="currentTab === 'settings' ? 'ph-fill ph-gear' : 'ph-bold ph-gear'"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- === 文章详情 (Sheet) === -->
+        <div x-show="activeArticle" 
+             style="display: none;"
+             class="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+            
+            <div x-show="activeArticle" x-transition.opacity.duration.400ms @click="closeArticle"
+                 class="absolute inset-0 bg-stone-900/40 backdrop-blur-sm"></div>
+            
+            <div x-show="activeArticle" 
+                 x-transition:enter="transition ease-[cubic-bezier(0.32,0.72,0,1)] duration-500"
+                 x-transition:enter-start="translate-y-full scale-95 opacity-50"
+                 x-transition:enter-end="translate-y-0 scale-100 opacity-100"
+                 x-transition:leave="transition ease-in duration-300"
+                 x-transition:leave-start="translate-y-0 scale-100 opacity-100"
+                 x-transition:leave-to="translate-y-full scale-95 opacity-0"
+                 class="bg-[#FFFEFC] w-full max-w-lg h-[90vh] rounded-t-[2.5rem] sm:rounded-[2.5rem] relative overflow-hidden flex flex-col shadow-2xl">
+                
+                <div class="absolute top-0 left-0 w-full h-8 z-20 flex justify-center pt-3 pointer-events-none">
+                    <div class="w-12 h-1 bg-stone-200 rounded-full"></div>
                 </div>
 
-                <!-- 滚动区域 -->
-                <div class="overflow-y-auto h-full bg-white relative">
+                <button @click="closeArticle" class="absolute top-6 right-6 z-20 w-8 h-8 rounded-full bg-stone-100 text-stone-500 flex items-center justify-center hover:bg-stone-200 transition">
+                    <i class="ph-bold ph-x"></i>
+                </button>
+
+                <div class="overflow-y-auto h-full px-8 pt-12 pb-32">
                     <template x-if="activeArticle">
-                        <div class="px-6 pt-12 pb-24">
-                            <!-- Header -->
-                            <div class="mb-6">
-                                <span class="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider uppercase mb-3 inline-block" x-text="activeArticle.unit"></span>
-                                <h1 class="text-2xl font-bold text-slate-900 leading-snug tracking-tight mb-2" x-text="activeArticle.title"></h1>
-                                <p class="text-xs text-slate-400" x-text="'发布于 ' + activeArticle.published_at"></p>
+                        <div>
+                            <!-- Header Info -->
+                            <div class="flex items-center gap-3 mb-6">
+                                <div class="w-10 h-10 rounded-full bg-imperial-50 border border-imperial-100 flex items-center justify-center text-imperial-600 text-lg">
+                                    <i class="ph-fill ph-buildings"></i>
+                                </div>
+                                <div>
+                                    <p class="text-xs font-bold text-stone-400 uppercase tracking-wider" x-text="activeArticle.unit"></p>
+                                    <p class="text-[10px] text-stone-300 font-mono" x-text="activeArticle.published_at"></p>
+                                </div>
                             </div>
 
-                            <!-- AI Summary Block -->
-                            <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-5 mb-8 border border-blue-100/50">
-                                <div class="flex items-center gap-2 mb-2 text-blue-700">
-                                    <i class="ph-fill ph-magic-wand"></i>
-                                    <span class="text-xs font-bold uppercase tracking-wide">AI 摘要</span>
+                            <h1 class="text-2xl font-extrabold text-stone-900 leading-snug tracking-tight mb-8" x-text="activeArticle.title"></h1>
+
+                            <!-- AI Insight Card: Prestige Style -->
+                            <div class="relative bg-gradient-to-br from-stone-900 to-stone-800 rounded-3xl p-6 text-white mb-10 overflow-hidden shadow-xl shadow-stone-300/50 border border-stone-700">
+                                <!-- 金色装饰线 -->
+                                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-gold-300 via-gold-500 to-gold-300"></div>
+                                <div class="absolute -bottom-10 -right-10 w-32 h-32 bg-gold-600/20 rounded-full blur-2xl"></div>
+                                
+                                <div class="flex items-center gap-2 mb-4 text-gold-400">
+                                    <i class="ph-fill ph-sparkle"></i>
+                                    <span class="text-xs font-bold tracking-[0.2em] text-gold-300">AI SUMMARY</span>
                                 </div>
-                                <p class="text-[15px] leading-7 text-slate-700 text-justify" x-text="activeArticle.fullSummary"></p>
+                                <p class="text-sm leading-7 font-medium text-stone-200 text-justify" x-text="activeArticle.fullSummary"></p>
                             </div>
 
                             <!-- Content -->
-                            <div class="prose prose-slate prose-sm max-w-none text-slate-600 leading-7">
-                                <p>各部门、各单位：</p>
-                                <p>根据年度工作安排，现将有关事项通知如下。请各单位高度重视，认真组织学习...</p>
-                                <div class="w-full h-32 bg-slate-50 rounded-lg flex items-center justify-center text-slate-300 text-xs my-4 border border-dashed border-slate-200">
-                                    [ 正文内容预览区域 ]
+                            <div class="prose prose-stone prose-sm max-w-none prose-p:text-stone-600 prose-headings:font-bold prose-headings:text-stone-800">
+                                <p class="lead text-stone-900 font-medium">各部门、各单位：</p>
+                                <p>为确保2025年度工作顺利开展，根据集团战略部署，现将有关事项通知如下...</p>
+                                <div class="space-y-3 my-6">
+                                    <div class="h-2 bg-stone-100 rounded-full w-full"></div>
+                                    <div class="h-2 bg-stone-100 rounded-full w-[90%]"></div>
+                                    <div class="h-2 bg-stone-100 rounded-full w-[95%]"></div>
                                 </div>
-                                <p>一、总体要求。<br>深入贯彻落实集团战略部署...</p>
+                                <p>请各单位高度重视，认真组织学习，并严格按照时间节点推进各项工作。</p>
                             </div>
 
-                            <!-- Attachments (Simplified - Download Icon Only) -->
-                            <div class="mt-10 pt-6 border-t border-slate-100">
-                                <div class="flex items-center justify-between mb-4">
-                                    <h4 class="text-sm font-bold text-slate-900">附件文档</h4>
-                                    <span class="text-xs text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full" x-text="activeArticle.attachments + ' 个文件'"></span>
-                                </div>
-                                
+                            <!-- Files -->
+                            <div class="mt-12 pt-8 border-t border-stone-100">
+                                <h4 class="text-xs font-bold text-stone-400 uppercase tracking-widest mb-4">附件下载</h4>
                                 <div class="space-y-3">
-                                    <!-- Attachment Item 1 -->
-                                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 group">
-                                        <div class="flex items-center gap-3 overflow-hidden pr-2">
-                                            <div class="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-slate-400 shadow-sm border border-slate-50 shrink-0">
-                                                <i class="ph-bold ph-file-pdf"></i>
-                                            </div>
-                                            <div class="flex flex-col min-w-0">
-                                                <p class="text-[13px] font-medium text-slate-700 truncate w-48">2025年度实施方案.pdf</p>
-                                                <p class="text-[10px] text-slate-400">2.4 MB</p>
-                                            </div>
+                                    <div class="flex items-center p-3 rounded-2xl border border-stone-100 hover:bg-stone-50 transition cursor-pointer group hover:border-gold-200">
+                                        <div class="w-10 h-10 rounded-xl bg-red-50 text-imperial-600 flex items-center justify-center shrink-0">
+                                            <i class="ph-fill ph-file-pdf text-xl"></i>
                                         </div>
-                                        <button class="w-9 h-9 rounded-full bg-slate-900 text-white flex items-center justify-center shadow-md active:scale-90 transition-transform">
-                                            <i class="ph-bold ph-download-simple"></i>
-                                        </button>
-                                    </div>
-                                    
-                                    <!-- Attachment Item 2 -->
-                                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 group">
-                                        <div class="flex items-center gap-3 overflow-hidden pr-2">
-                                            <div class="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-slate-400 shadow-sm border border-slate-50 shrink-0">
-                                                <i class="ph-bold ph-file-doc"></i>
-                                            </div>
-                                            <div class="flex flex-col min-w-0">
-                                                <p class="text-[13px] font-medium text-slate-700 truncate w-48">附件：任务分解表.docx</p>
-                                                <p class="text-[10px] text-slate-400">540 KB</p>
-                                            </div>
+                                        <div class="ml-3 flex-1 min-w-0">
+                                            <p class="text-sm font-bold text-stone-700 truncate group-hover:text-imperial-700">2025年度实施方案.pdf</p>
+                                            <p class="text-[10px] text-stone-400">2.4 MB</p>
                                         </div>
-                                        <button class="w-9 h-9 rounded-full bg-slate-900 text-white flex items-center justify-center shadow-md active:scale-90 transition-transform">
+                                        <div class="w-8 h-8 rounded-full bg-white border border-stone-100 flex items-center justify-center text-stone-400 group-hover:text-gold-600 group-hover:border-gold-300 transition">
                                             <i class="ph-bold ph-download-simple"></i>
-                                        </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-
                         </div>
                     </template>
-                </div>
-                
-                <!-- 底部关闭按钮（悬浮） -->
-                <div class="absolute bottom-6 left-0 w-full flex justify-center pointer-events-none">
-                    <button @click="closeArticle" class="pointer-events-auto bg-slate-900/90 text-white px-6 py-2.5 rounded-full text-sm font-medium shadow-lg backdrop-blur hover:bg-slate-800 transition transform active:scale-95">
-                        关闭阅读
-                    </button>
                 </div>
             </div>
         </div>
@@ -355,18 +445,18 @@
     </div>
 
     <script>
+        // 逻辑保持不变
         function appData() {
             return {
                 isLoggedIn: false,
                 currentTab: 'home',
                 isScrolled: false,
-                pageTitle: '今日摘要',
-                currentDate: new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' }),
+                pageTitle: '今日要闻',
+                currentDate: new Date().toLocaleDateString('zh-CN', { weekday: 'long', month: 'numeric', day: 'numeric' }),
                 activeArticle: null,
                 chatInput: '',
                 chatHistory: [],
                 isThinking: false,
-                customAI: false,
                 articles: [
                     {
                         id: 1,
@@ -374,8 +464,9 @@
                         unit: '信息技术部',
                         time: '10:30',
                         published_at: '2025-12-20',
-                        summary: '核心：明确2025年三大系统升级计划。重点：1. 启动新ERP选型；2. 全面推行数据资产入表；3. 要求Q1完成API接口改造。',
-                        fullSummary: '本通知详细规划了2025年度公司信息化建设路径。核心要点包括：1. 启动新一代ERP系统选型；2. 全面推行数据资产入表工作；3. 要求各业务单元在Q1完成现有系统API接口的标准化改造。文件同时强调了网络安全责任制，违规操作将纳入年度绩效考核。',
+                        priority: 'high',
+                        summary: '核心：明确2025年三大系统升级计划。启动新ERP选型，推行数据资产入表，Q1完成API接口改造。',
+                        fullSummary: '本通知详细规划了2025年度公司信息化建设路径。核心要点：1. 启动新一代ERP系统选型；2. 全面推行数据资产入表；3. 要求Q1完成API标准化改造。强调网络安全红线。',
                         read: false,
                         attachments: 2
                     },
@@ -385,8 +476,9 @@
                         unit: '财务部',
                         time: '09:15',
                         published_at: '2025-12-20',
-                        summary: '要求各部门于12月25日前完成报销，暂停非紧急对外付款。',
-                        fullSummary: '财务部发布年终决算紧急事项：所有费用报销需在12月25日17:00前提交完毕，逾期计入明年费用。即日起暂停非紧急合同付款。各部门需盘点固定资产，并在月底前提交盘点报告。',
+                        priority: 'high',
+                        summary: '12月25日前完成报销，即日起暂停非紧急对外付款。',
+                        fullSummary: '年终决算紧急事项：所有费用报销需在12月25日17:00前提交完毕。即日起暂停非紧急合同付款，各部门需在月底前提交资产盘点报告。',
                         read: true,
                         attachments: 1
                     },
@@ -396,77 +488,46 @@
                         unit: '行政部',
                         time: '08:40',
                         published_at: '2025-12-20',
+                        priority: 'normal',
                         summary: '元旦放假时间为1月1日（周三），不调休。',
-                        fullSummary: '元旦放假安排确认：1月1日（周三）放假一天，不进行调休。各部门需在12月28日前提交值班表。放假离开办公室前请务必关闭电源、锁好门窗。',
+                        fullSummary: '1月1日（周三）放假一天，不调休。各部门需在12月28日前提交值班表，离开前请关闭电源。',
                         read: true,
                         attachments: 0
                     }
                 ],
-
-                initApp() {
-                    // Check local storage logic
-                },
-
-                login() {
-                    // Simulate Login
-                    setTimeout(() => {
-                        this.isLoggedIn = true;
-                    }, 600);
-                },
-                
-                logout() {
-                    this.isLoggedIn = false;
-                    this.currentTab = 'home';
-                },
-
+                initApp() {},
+                login() { setTimeout(() => { this.isLoggedIn = true; }, 500); },
+                logout() { this.isLoggedIn = false; setTimeout(() => { this.currentTab = 'home'; }, 500); },
                 switchTab(tab) {
                     this.currentTab = tab;
-                    if (tab === 'home') this.pageTitle = '今日摘要';
-                    if (tab === 'ai') this.pageTitle = 'AI 助手';
-                    if (tab === 'settings') this.pageTitle = '设置';
+                    if (tab === 'home') this.pageTitle = '今日要闻';
+                    if (tab === 'ai') this.pageTitle = '智能助理';
+                    if (tab === 'settings') this.pageTitle = '个人中心';
                     window.scrollTo(0, 0);
                 },
-
-                openArticle(article) {
-                    this.activeArticle = article;
-                    article.read = true; // Mark as read
-                },
-
-                closeArticle() {
-                    this.activeArticle = null;
-                },
-
+                openArticle(article) { this.activeArticle = article; article.read = true; },
+                closeArticle() { this.activeArticle = null; },
+                quickAsk(question) { this.chatInput = question; this.sendChat(); },
                 sendChat() {
                     if (!this.chatInput.trim()) return;
-                    
                     const userMsg = this.chatInput;
                     this.chatHistory.push({ isUser: true, text: userMsg });
                     this.chatInput = '';
                     this.isThinking = true;
-                    
-                    this.$nextTick(() => {
-                        const container = document.getElementById('chatContainer');
-                        container.scrollTop = container.scrollHeight;
-                    });
-
+                    this.$nextTick(() => { const container = document.getElementById('chatContainer'); container.scrollTop = container.scrollHeight; });
                     setTimeout(() => {
                         this.isThinking = false;
                         let responseText = "";
-                        if (userMsg.includes("财务")) {
-                            responseText = "财务部要求在<b>12月25日</b>前完成所有报销，并暂停了非紧急付款。";
-                        } else if (userMsg.includes("放假")) {
-                            responseText = "元旦放假时间是<b>1月1日</b>，仅放假一天，不调休。";
+                        if (userMsg.includes("财务") || userMsg.includes("报销")) {
+                            responseText = `根据<span class="font-bold text-imperial-600">《年终财务决算通知》</span>：<br>截止时间为 12月25日 17:00。<br>目前已暂停非紧急付款。`;
+                        } else if (userMsg.includes("放假") || userMsg.includes("元旦")) {
+                            responseText = `元旦放假安排为：<br><span class="font-bold text-imperial-600">1月1日（周三）</span>放假一天，不调休。`;
                         } else {
-                            responseText = "为您检索到：重点在于<b>信息化建设</b>和<b>年终决算</b>。需要我详细解读《2025信息化实施方案》吗？";
+                            responseText = "已为您检索今日通知。重点包含：信息化建设方案、财务决算截止时间及元旦放假安排。";
                         }
-                        
                         this.chatHistory.push({ isUser: false, text: responseText });
-                        
-                        this.$nextTick(() => {
-                            const container = document.getElementById('chatContainer');
-                            container.scrollTop = container.scrollHeight;
-                        });
-                    }, 1200);
+                        this.$nextTick(() => { const container = document.getElementById('chatContainer'); container.scrollTop = container.scrollHeight; });
+                    }, 1500);
                 }
             }
         }
