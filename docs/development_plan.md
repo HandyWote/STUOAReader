@@ -43,7 +43,7 @@
 1) **基础栈**
    - `expo-router`, `@tanstack/react-query`（持久化 mmkv）, `axios`, `react-native-mmkv`, `expo-secure-store`, `expo-file-system`, `expo-notifications`, `expo-background-fetch`, `expo-task-manager`.
 2) **鉴权**
-   - 用户名/密码登录，后端签发 JWT；secure-store 保存 access/refresh，拦截器自动刷新。
+   - 登录页采用账号/密码输入表单（替代“开启今日阅读”CTA），后端签发 JWT；secure-store 保存 access/refresh，拦截器自动刷新。
 3) **数据与缓存**
    - 列表/详情通过后端 API；react-query 持久化；正文/附件元数据缓存到本地（附件不下载）。
    - 未读状态：由客户端本地维护（后端不记录已读）。
@@ -55,6 +55,8 @@
 6) **体验**
    - 通知开关/静音时段、轮询间隔（受系统最小值限制）。
    - 列表搜索/筛选可后续迭代。
+7) **个人中心展示**
+   - 仅展示头像、姓名与 VIP 标识（不显示部门信息）。
 
 ## 重构方案（基于现有爬虫升级）
 
