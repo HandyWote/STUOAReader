@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import date, timedelta
 from typing import Any
 
 from flask import Blueprint, jsonify, request
@@ -76,22 +77,58 @@ def search_similar_articles(query_embedding: list[float], top_k: int = 3) -> lis
         # 1. 将Python向量列表转换为PostgreSQL向量格式字符串
         # pgvector的向量格式：["0.1,0.2,0.3,..."]
         vector_str = "[" + ",".join(map(str, query_embedding)) + "]"
-        
-        # 2. 使用pgvector的余弦相似度搜索
-        # <=> 运算符：返回余弦相似度，值越小表示越相似
-        # ORDER BY similarity ASC：按相似度升序排列（最相似的在前）
-        sql = """
-        SELECT a.id, a.title, a.unit, a.published_on, a.summary, a.content, 
-               v.embedding <=> %s::vector AS similarity  -- 计算余弦相似度
-        FROM vectors v
-        JOIN articles a ON v.article_id = a.id  -- 关联文章表
-        ORDER BY similarity ASC  -- 按相似度升序排列（值越小越相似）
-        LIMIT %s  -- 返回前top_k条
-        """
+
+        filters: list[str] = []
+        params: list[Any] = []
+        limit_days = config.ai_vector_limit_days
+        limit_count = config.ai_vector_limit_count
+
+        if limit_days is not None and limit_days > 0:
+            cutoff = date.today() - timedelta(days=limit_days - 1)
+            filters.append("v.published_on >= %s")
+            params.append(cutoff)
+        else:
+            limit_days = None
+
+        if limit_count is not None and limit_count <= 0:
+            limit_count = None
+
+        where_clause = ""
+        if filters:
+            where_clause = "WHERE " + " AND ".join(filters)
+
+        if limit_count:
+            sql = f"""
+            WITH candidate AS (
+                SELECT a.id, a.title, a.unit, a.published_on, a.summary, a.content, v.embedding, v.created_at
+                FROM vectors v
+                JOIN articles a ON v.article_id = a.id
+                {where_clause}
+                ORDER BY v.created_at DESC
+                LIMIT %s
+            )
+            SELECT id, title, unit, published_on, summary, content,
+                   embedding <=> %s::vector AS similarity
+            FROM candidate
+            ORDER BY similarity ASC
+            LIMIT %s
+            """
+            params.extend([limit_count, vector_str, top_k])
+        else:
+            sql = f"""
+            SELECT a.id, a.title, a.unit, a.published_on, a.summary, a.content,
+                   v.embedding <=> %s::vector AS similarity  -- 计算余弦相似度
+            FROM vectors v
+            JOIN articles a ON v.article_id = a.id  -- 关联文章表
+            {where_clause}
+            ORDER BY similarity ASC  -- 按相似度升序排列（值越小越相似）
+            LIMIT %s  -- 返回前top_k条
+            """
+            params.extend([vector_str, top_k])
         
         # 3. 执行查询
         with db_session() as conn, conn.cursor() as cur:
-            cur.execute(sql, (vector_str, top_k))
+            cur.execute(sql, params)
             results = cur.fetchall()
         
         # 转换结果

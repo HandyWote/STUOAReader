@@ -35,6 +35,8 @@ class Config:
         self.embed_model: Optional[str] = None
         self.embed_api_key: Optional[str] = None
         self.embed_dim: int = 1024
+        self.ai_vector_limit_days: Optional[int] = None
+        self.ai_vector_limit_count: Optional[int] = None
 
         self.load()
 
@@ -85,6 +87,8 @@ class Config:
             "EMBED_MODEL",
             "EMBED_API_KEY",
             "EMBED_DIM",
+            "AI_VECTOR_LIMIT_DAYS",
+            "AI_VECTOR_LIMIT_COUNT",
         ]
         for key in keys:
             value = os.getenv(key)
@@ -144,6 +148,16 @@ class Config:
         elif key == "EMBED_DIM":
             try:
                 self.embed_dim = int(value)
+            except ValueError:
+                pass
+        elif key == "AI_VECTOR_LIMIT_DAYS":
+            try:
+                self.ai_vector_limit_days = int(value)
+            except ValueError:
+                pass
+        elif key == "AI_VECTOR_LIMIT_COUNT":
+            try:
+                self.ai_vector_limit_count = int(value)
             except ValueError:
                 pass
 

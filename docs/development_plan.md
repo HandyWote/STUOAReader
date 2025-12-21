@@ -14,7 +14,7 @@
 2) **API**
    - 鉴权：`POST /auth/token`（用户名/密码登录，校园认证校验）、`POST /auth/token/refresh`.
    - 文章：`GET /articles?date=YYYY-MM-DD&since=ts`（增量列表，含附件元数据、ETag/Last-Modified 支持 304）；`GET /articles/:id`。
-   - AI：`POST /ai/ask`（官方模型，向量检索范围由后端配置控制）。
+   - AI：`POST /ai/ask`（官方模型，向量检索范围由后端配置控制：`AI_VECTOR_LIMIT_DAYS`/`AI_VECTOR_LIMIT_COUNT`）。
    - 通知测试：可选 `/notifications/test`。
 3) **缓存与优化**
    - Redis 缓存最新列表摘要，配合 `If-None-Match/If-Modified-Since` 返回 304。
@@ -134,7 +134,7 @@
 2. 文章增量接口缺失：现有 `start_date/end_date/limit/offset` 与 `latest/by-date`，计划要求 `/articles?date=YYYY-MM-DD&since=ts`。
 3. 阅读状态接口：不做（由客户端本地维护未读/已读）。
 4. AI 代理模式：不做（统一使用后端配置的模型 Key）。
-5. 问答向量过滤需调整：由“仅当日”改为“按条数或天数”控制，参数化在后端环境配置。
+5. 问答向量过滤需调整：由“仅当日”改为“按条数或天数”控制，参数化在后端环境配置（`AI_VECTOR_LIMIT_DAYS`/`AI_VECTOR_LIMIT_COUNT`）。
 6. 304 缓存口径需细化：已有 ETag，`Last-Modified` 以列表范围内 `MAX(created_at)` 为准，`If-Modified-Since` 对比后决定 304。
 7. 通知测试端点：可选，当前不在优先级。
 8. 监控与结构化日志：延后到未来计划。
