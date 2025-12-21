@@ -10,18 +10,18 @@
    - 文章表：`id, title, unit, link (unique), published_on, content, summary, attachments (jsonb), created_at, updated_at`.
    - 向量表：`id, article_id, embedding, published_on, created_at`（仅当日用于问答）。
    - 阅读状态：`id, user_id, article_id, read_at`.
-   - 用户表：`id, sso_id, created_at, updated_at`.
+   - 用户表：`id, username, display_name, password_hash, password_algo, password_cost, roles, created_at, updated_at`.
 2) **API**
-   - 鉴权：`POST /auth/login`（SSO 交换 JWT）、`POST /auth/refresh`.
-   - 文章：`GET /articles?date=YYYY-MM-DD&since=ts`（增量列表，含附件元数据、ETag/Last-Modified 支持 304）；`GET /articles/:id`；`POST /articles/read`（批量读标记）。
-   - AI：`POST /ai/ask`（官方模型，只查当日向量）；`POST /ai/ask/proxy`（用户自带 base_url/api_key/model 透传，不落库）。
+   - 鉴权：`POST /auth/token`（用户名/密码登录，校园认证校验）、`POST /auth/token/refresh`.
+   - 文章：`GET /articles?date=YYYY-MM-DD&since=ts`（增量列表，含附件元数据、ETag/Last-Modified 支持 304）；`GET /articles/:id`。
+   - AI：`POST /ai/ask`（官方模型，向量检索范围由后端配置控制）。
    - 通知测试：可选 `/notifications/test`。
 3) **缓存与优化**
    - Redis 缓存最新列表摘要，配合 `If-None-Match/If-Modified-Since` 返回 304。
-   - 限流与日志：按用户/IP 速率限制，记录 AI 调用/爬虫写入。
+   - 限流与日志：按用户/IP 速率限制，记录 AI 调用/爬虫写入（结构化日志可后续完善）。
 4) **安全/运维**
    - HTTPS、JWT 过期/刷新、CORS。
-   - 监控：爬虫成功率、接口延迟、轮询量、AI 调用量。
+   - 监控：爬虫成功率、接口延迟、轮询量、AI 调用量（后续计划）。
 
 ## 爬虫（Python） ✅ 已完成
 1) **调度**
@@ -43,16 +43,15 @@
 1) **基础栈**
    - `expo-router`, `@tanstack/react-query`（持久化 mmkv）, `axios`, `react-native-mmkv`, `expo-secure-store`, `expo-file-system`, `expo-notifications`, `expo-background-fetch`, `expo-task-manager`.
 2) **鉴权**
-   - SSO 登录（WebView/AuthSession），后端换 JWT；secure-store 保存 access/refresh，拦截器自动刷新。
+   - 用户名/密码登录，后端签发 JWT；secure-store 保存 access/refresh，拦截器自动刷新。
 3) **数据与缓存**
    - 列表/详情通过后端 API；react-query 持久化；正文/附件元数据缓存到本地（附件不下载）。
-   - 未读状态：后端返回未读数，阅读时打 `/articles/read`；离线先记账，恢复后同步。
+   - 未读状态：由客户端本地维护（后端不记录已读）。
 4) **轮询与通知**
    - 后台轮询（默认 1 小时，可在 07:00–24:00 生效），`/articles?since=ts` 增量获取；发现新文章触发本地通知 + 红点/角标。
    - 前台可短轮询/下拉刷新；弱网离线可看缓存。
 5) **AI 问答**
-   - 官方模式：调用后端 `/ai/ask`，仅当日向量。
-   - 自带模式：客户端收 base_url/api_key/model，调用 `/ai/ask/proxy` 透传到用户服务商，后端不存 Key；检索同样限定当日。
+   - 官方模式：调用后端 `/ai/ask`，向量检索范围由后端配置控制（按条数或天数）。
 6) **体验**
    - 通知开关/静音时段、轮询间隔（受系统最小值限制）。
    - 列表搜索/筛选可后续迭代。
@@ -128,3 +127,17 @@
 - 附件 DOM 解析规则你会提供；实现时按规则提取名称/URL。
 - ETag/Last-Modified 需后端与客户端配合（支持 304）；若用 `since` 增量可简化但建议保留 304。
 - 上线前联调：登录、增量拉取、通知跳转、AI 两种模式、离线/弱网测试。***
+
+## 当前后端差距清单（对照本计划）
+以下问题来自对现有 `backend/` 的初步核对，用于后续逐项对齐实现：
+1. 认证口径已确认：采用 `/api/auth/token`、`/api/auth/token/refresh` 的用户名/密码登录 + 校园认证校验方案。
+2. 文章增量接口缺失：现有 `start_date/end_date/limit/offset` 与 `latest/by-date`，计划要求 `/articles?date=YYYY-MM-DD&since=ts`。
+3. 阅读状态接口：不做（由客户端本地维护未读/已读）。
+4. AI 代理模式：不做（统一使用后端配置的模型 Key）。
+5. 问答向量过滤需调整：由“仅当日”改为“按条数或天数”控制，参数化在后端环境配置。
+6. 304 缓存口径需细化：已有 ETag，`Last-Modified` 以列表范围内 `MAX(created_at)` 为准，`If-Modified-Since` 对比后决定 304。
+7. 通知测试端点：可选，当前不在优先级。
+8. 监控与结构化日志：延后到未来计划。
+
+## 未来计划
+- 监控与结构化日志：补充指标采集与结构化日志输出。
