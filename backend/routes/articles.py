@@ -25,6 +25,26 @@ logger = logging.getLogger(__name__)
 # 获取缓存实例
 cache = get_cache()
 
+
+def _as_utc(dt: datetime) -> datetime:
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def _serialize_value(value: Any) -> Any:
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    if isinstance(value, list):
+        return [_serialize_value(item) for item in value]
+    if isinstance(value, dict):
+        return {key: _serialize_value(val) for key, val in value.items()}
+    return value
+
+
+def _serialize_row(row: dict[str, Any]) -> dict[str, Any]:
+    return {key: _serialize_value(val) for key, val in row.items()}
+
 @bp.route('/', methods=['GET'])
 def get_articles():
     """获取文章列表。
@@ -116,9 +136,7 @@ def get_articles():
                 response.headers['ETag'] = etag  # 设置ETag头
                 response.headers['Cache-Control'] = 'max-age=3600, public'  # 缓存1小时
                 if last_modified:
-                    if last_modified.tzinfo is None:
-                        last_modified = last_modified.replace(tzinfo=timezone.utc)
-                    response.headers['Last-Modified'] = format_datetime(last_modified, usegmt=True)
+                    response.headers['Last-Modified'] = format_datetime(_as_utc(last_modified), usegmt=True)
                 return response, 200
 
         if ims_dt and (last_modified is None or ims_dt >= last_modified):
@@ -142,10 +160,12 @@ def get_articles():
         with db_session() as conn, conn.cursor() as cur:
             cur.execute(sql, params)
             rows = cur.fetchall()
+
+        articles = [_serialize_row(row) for row in rows]
         
         # 准备响应数据
         response_data = {
-            "articles": rows
+            "articles": articles
         }
         
         # 缓存数据
@@ -160,9 +180,7 @@ def get_articles():
             response.headers['ETag'] = etag
             response.headers['Cache-Control'] = 'max-age=3600, public'
         if last_modified:
-            if last_modified.tzinfo is None:
-                last_modified = last_modified.replace(tzinfo=timezone.utc)
-            response.headers['Last-Modified'] = format_datetime(last_modified, usegmt=True)
+            response.headers['Last-Modified'] = format_datetime(_as_utc(last_modified), usegmt=True)
         
         return response, 200
         
@@ -217,14 +235,16 @@ def get_article_detail(article_id: int):
         
         if not article:
             return jsonify({"error": "文章不存在"}), 404
+
+        article_data = _serialize_row(article)
         
         # 缓存数据
         if cache:
-            cache.set(cache_key, article, expire_seconds=3600)
+            cache.set(cache_key, article_data, expire_seconds=3600)
         
         # 生成ETag并返回响应
-        etag = cache.generate_etag(article) if cache else ''
-        response = jsonify(article)
+        etag = cache.generate_etag(article_data) if cache else ''
+        response = jsonify(article_data)
         
         if etag:
             response.headers['ETag'] = etag
