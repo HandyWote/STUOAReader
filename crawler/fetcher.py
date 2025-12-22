@@ -106,20 +106,41 @@ def fetch_list(target_date: str) -> list[ArticleMeta]:
 
 
 def _clean_text(soup: BeautifulSoup) -> str:
-    """清理 HTML 内容，提取纯文本。
-    
-    参数：
-        soup: BeautifulSoup 对象
-        
-    返回：
-        str: 清理后的纯文本内容
-    """
-    # 移除脚本和样式标签
+    """清理 HTML 内容，提取纯文本（保留自然段落）。"""
     for tag in soup(["script", "style"]):
         tag.decompose()
-    # 提取文本并清理空白行
-    text = soup.get_text(separator="\n")
-    return "\n".join(line.strip() for line in text.splitlines() if line.strip())
+
+    container = soup.select_one("#spanContent") or soup
+    body = container.find("body") if container else None
+    if body:
+        container = body
+
+    for table in container.select("table.viewform"):
+        table.decompose()
+    for row in container.select("tr[id^=accessory_dsp_tr_]"):
+        row.decompose()
+
+    paragraphs = []
+    for p in container.find_all("p"):
+        if p.find("p") is not None:
+            continue
+        text = p.get_text(separator="\n", strip=True)
+        text = text.replace("\xa0", " ").strip()
+        if not text:
+            continue
+        if "相关附件" in text or text.startswith("附件"):
+            continue
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        if lines:
+            paragraphs.append(" ".join(lines))
+
+    if not paragraphs:
+        text = container.get_text(separator="\n")
+        text = text.replace("\xa0", " ")
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        paragraphs = lines
+
+    return "\n\n".join(paragraphs)
 
 
 def _parse_attachments(soup: BeautifulSoup) -> list[dict[str, str]]:
@@ -169,12 +190,10 @@ def fetch_detail(link: str) -> DetailResult:
     soup = BeautifulSoup(html, "html.parser")
     # 解析附件
     attachments = _parse_attachments(soup)
-    # 清理内容
     content = _clean_text(soup)
 
-    # 如果有附件，将附件信息添加到内容末尾
     if attachments:
         attach_lines = [f"附件: {item.get('名称','')} ({item.get('链接','')})" for item in attachments]
-        content = f"{content}\n" + "\n".join(attach_lines)
+        content = f"{content}\n\n" + "\n".join(attach_lines)
 
     return DetailResult(content=content, attachments=attachments)
