@@ -26,6 +26,7 @@ from crawler.models import ArticleRecord, ArticleMeta
 from crawler.storage import ArticleRepository
 from crawler.summarizer import Summarizer
 from crawler.db import db_session
+from crawler.cache import clear_article_list_cache
 
 
 
@@ -196,6 +197,12 @@ class Crawler:
                 try:
                     inserted = self.repo.insert_articles(conn, records)
                     print(f"✅ 入库完成，新增 {inserted} 条")
+                    if inserted > 0:
+                        cleared = clear_article_list_cache(self.target_date)
+                        if cleared > 0:
+                            print(f"✅ 已刷新列表缓存，清理 {cleared} 条")
+                        else:
+                            print("⚠️ 未清理到缓存，可能未启用Redis或无命中")
 
                     # 为新增文章生成向量
                     print("正在生成文章向量...")

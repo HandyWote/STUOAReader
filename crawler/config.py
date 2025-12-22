@@ -67,6 +67,10 @@ class Config:
         self.embed_model: Optional[str] = None  # 嵌入模型名称
         self.embed_api_key: Optional[str] = None  # 嵌入服务API密钥
         self.embed_dim: int = 1024  # 嵌入向量维度
+        self.redis_host: str = "localhost"
+        self.redis_port: int = 6379
+        self.redis_db: int = 0
+        self.redis_password: Optional[str] = None
 
         # 从所有源加载配置
         self.load()
@@ -189,6 +193,10 @@ class Config:
             "EMBED_MODEL",      # 嵌入模型名称
             "EMBED_API_KEY",    # 嵌入服务API密钥
             "EMBED_DIM",        # 嵌入向量维度
+            "REDIS_HOST",       # Redis主机
+            "REDIS_PORT",       # Redis端口
+            "REDIS_DB",         # Redis数据库
+            "REDIS_PASSWORD",   # Redis密码
         ]
         
         for key in keys:
@@ -247,8 +255,22 @@ class Config:
             try:
                 self.embed_dim = int(value)
             except ValueError:
-                pass
                 pass  # 如果转换失败，保持默认值
+        elif key == "REDIS_HOST":
+            if value:
+                self.redis_host = value
+        elif key == "REDIS_PORT":
+            try:
+                self.redis_port = int(value)
+            except ValueError:
+                pass
+        elif key == "REDIS_DB":
+            try:
+                self.redis_db = int(value)
+            except ValueError:
+                pass
+        elif key == "REDIS_PASSWORD":
+            self.redis_password = value or None
 
 
 __all__ = ["Config"]  # 此模块的公共API
