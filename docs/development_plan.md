@@ -9,15 +9,16 @@
 1) **数据模型**
    - 文章表：`id, title, unit, link (unique), published_on, content, summary, attachments (jsonb), created_at, updated_at`.
    - 向量表：`id, article_id, embedding, published_on, created_at`（仅当日用于问答）。
-   - 阅读状态：`id, user_id, article_id, read_at`.
    - 用户表：`id, username, display_name, password_hash, password_algo, password_cost, roles, created_at, updated_at`.
 2) **API**
    - 鉴权：`POST /auth/token`（用户名/密码登录，校园认证校验）、`POST /auth/token/refresh`.
    - 文章：`GET /articles?date=YYYY-MM-DD&since=ts`（增量列表，含附件元数据、ETag/Last-Modified 支持 304）；`GET /articles/:id`。
    - AI：`POST /ai/ask`（官方模型，向量检索范围由后端配置控制：`AI_VECTOR_LIMIT_DAYS`/`AI_VECTOR_LIMIT_COUNT`）。
    - 通知测试：可选 `/notifications/test`。
+   - 阅读状态接口：不做（由客户端本地维护）。
 3) **缓存与优化**
    - Redis 缓存最新列表摘要，配合 `If-None-Match/If-Modified-Since` 返回 304。
+   - Redis 仅缓存最近 5 天文章列表。
    - 限流与日志：按用户/IP 速率限制，记录 AI 调用/爬虫写入（结构化日志可后续完善）。
 4) **安全/运维**
    - HTTPS、JWT 过期/刷新、CORS。

@@ -1,98 +1,924 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Animated,
+  Dimensions,
+  FlatList,
+  Modal,
+  Pressable,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as SecureStore from 'expo-secure-store';
+import {
+  ArrowUpRight,
+  Bell,
+  Buildings,
+  Crown,
+  Eye,
+  Gear,
+  Paperclip,
+  Sparkle,
+  X,
+  House,
+} from 'phosphor-react-native';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+const colors = {
+  surface: '#FDFCF8',
+  gold50: '#FBF7E8',
+  gold100: '#F5EBC9',
+  gold200: '#F3E0AF',
+  gold300: '#E8C871',
+  gold400: '#D4AF37',
+  gold500: '#B8860B',
+  gold600: '#926F34',
+  imperial50: '#FCECEC',
+  imperial100: '#F7CFCF',
+  imperial400: '#E16C6C',
+  imperial500: '#C02425',
+  imperial600: '#9B1C1C',
+  stone900: '#1C1917',
+  stone800: '#2B211E',
+  stone700: '#3A2F2B',
+  stone600: '#5C524E',
+  stone500: '#6B6461',
+  stone400: '#9A928F',
+  stone300: '#C8C2BF',
+  stone200: '#E6E2DF',
+  stone100: '#F1EFED',
+  white: '#FFFFFF',
+};
+
+type Article = {
+  id: number;
+  title: string;
+  unit?: string;
+  link?: string;
+  published_on?: string;
+  created_at?: string;
+  summary?: string;
+  attachments?: unknown;
+};
+
+type ArticleDetail = Article & {
+  content?: string;
+};
+
+const screenHeight = Dimensions.get('window').height;
+const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:5000/api';
+
+function formatDateLabel() {
+  try {
+    return new Intl.DateTimeFormat('zh-CN', {
+      weekday: 'long',
+      month: 'numeric',
+      day: 'numeric',
+    }).format(new Date());
+  } catch {
+    return new Date().toLocaleDateString();
+  }
+}
+
+function formatTimeLabel(iso?: string) {
+  if (!iso) {
+    return '--:--';
+  }
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return '--:--';
+  }
+  return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+}
+
+function getAttachmentsCount(value: unknown) {
+  if (!value) {
+    return 0;
+  }
+  if (Array.isArray(value)) {
+    return value.length;
+  }
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed.length : 0;
+    } catch {
+      return 0;
+    }
+  }
+  return 0;
+}
+
+function getPriority(title: string) {
+  if (!title) {
+    return 'normal';
+  }
+  if (title.includes('紧急') || title.includes('重要')) {
+    return 'high';
+  }
+  return 'normal';
+}
+
+function normalizeParagraphs(text: string) {
+  if (!text) {
+    return '';
+  }
+  const normalized = text
+    .replace(/\r\n/g, '\n')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/([^\n])\n([^\n])/g, '$1 $2')
+    .trim();
+  return normalized;
+}
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [activeArticle, setActiveArticle] = useState<Article | null>(null);
+  const [activeDetail, setActiveDetail] = useState<ArticleDetail | null>(null);
+  const [sheetVisible, setSheetVisible] = useState(false);
+  const [readIds, setReadIds] = useState<Record<number, boolean>>({});
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  const fadeIn = useRef(new Animated.Value(0)).current;
+  const sheetAnim = useRef(new Animated.Value(screenHeight)).current;
+
+  const pageTitle = '今日要闻';
+  const currentDate = useMemo(() => formatDateLabel(), []);
+
+  useEffect(() => {
+    let mounted = true;
+    SecureStore.getItemAsync('access_token').then((value) => {
+      if (mounted) {
+        setToken(value);
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const fetchArticles = useCallback(async () => {
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+    const resp = await fetch(`${apiBaseUrl}/articles/`, { headers });
+    if (!resp.ok) {
+      throw new Error('articles fetch failed');
+    }
+    const data = await resp.json();
+    const list = Array.isArray(data?.articles) ? data.articles : [];
+    return list as Article[];
+  }, [token]);
+
+  const loadArticles = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const list = await fetchArticles();
+      setArticles(list);
+      Animated.timing(fadeIn, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+    } catch {
+      setArticles([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [fadeIn, fetchArticles]);
+
+  const refreshArticles = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      const list = await fetchArticles();
+      setArticles(list);
+    } catch {
+      setArticles([]);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [fetchArticles]);
+
+  useEffect(() => {
+    loadArticles();
+  }, [loadArticles]);
+
+  const openArticle = useCallback(
+    async (article: Article) => {
+      setActiveArticle(article);
+      setSheetVisible(true);
+      setReadIds((prev) => ({ ...prev, [article.id]: true }));
+
+      Animated.timing(sheetAnim, {
+        toValue: 0,
+        duration: 450,
+        useNativeDriver: true,
+      }).start();
+
+      setActiveDetail(null);
+      try {
+        const headers: Record<string, string> = {};
+        if (token) {
+          headers.Authorization = `Bearer ${token}`;
+        }
+        const resp = await fetch(`${apiBaseUrl}/articles/${article.id}`, { headers });
+        if (!resp.ok) {
+          return;
+        }
+        const detail = (await resp.json()) as ArticleDetail;
+        setActiveDetail(detail);
+      } catch {
+        setActiveDetail(null);
+      }
+    },
+    [sheetAnim, token]
+  );
+
+  const closeArticle = useCallback(() => {
+    Animated.timing(sheetAnim, {
+      toValue: screenHeight,
+      duration: 320,
+      useNativeDriver: true,
+    }).start(() => {
+      setSheetVisible(false);
+      setActiveArticle(null);
+      setActiveDetail(null);
+    });
+  }, [sheetAnim]);
+
+  const markAllRead = useCallback(() => {
+    setReadIds((prev) => {
+      const next: Record<number, boolean> = { ...prev };
+      articles.forEach((article) => {
+        next[article.id] = true;
+      });
+      return next;
+    });
+  }, [articles]);
+
+  const hasUnread = useMemo(
+    () => articles.some((article) => !readIds[article.id]),
+    [articles, readIds]
+  );
+
+  const renderItem = useCallback(
+    ({ item, index }: { item: Article; index: number }) => {
+      const attachmentsCount = getAttachmentsCount(item.attachments);
+      const priority = getPriority(item.title);
+      const isRead = !!readIds[item.id];
+      return (
+        <Pressable
+          onPress={() => openArticle(item)}
+          style={({ pressed }) => [
+            styles.cardPressable,
+            pressed && styles.cardPressed,
+            index === 0 && { marginTop: 8 },
+          ]}
+        >
+          <LinearGradient
+            colors={[colors.white, '#F7F4EF']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.card}
+          >
+            <View style={styles.cardGlow} />
+            <View style={styles.cardHeader}>
+              <View style={styles.cardMetaLeft}>
+                <View
+                  style={[
+                    styles.tag,
+                    priority === 'high' ? styles.tagHigh : styles.tagNormal,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.tagText,
+                      priority === 'high' ? styles.tagTextHigh : styles.tagTextNormal,
+                    ]}
+                  >
+                    {item.unit || '公告'}
+                  </Text>
+                </View>
+                <Text style={styles.cardTime}>{formatTimeLabel(item.created_at)}</Text>
+              </View>
+              {!isRead && (
+                <View style={styles.unreadDot}>
+                  <View style={styles.unreadPulse} />
+                  <View style={styles.unreadCore} />
+                </View>
+              )}
+            </View>
+
+            <View style={styles.cardBody}>
+              <Text style={styles.cardTitle} numberOfLines={2}>
+                {item.title}
+              </Text>
+              <Text style={styles.cardSummary}>
+                {item.summary || '暂无摘要'}
+              </Text>
+            </View>
+
+            <View style={styles.cardFooter}>
+              <View style={styles.cardStats}>
+                {attachmentsCount > 0 && (
+                  <View style={styles.cardStatItem}>
+                    <Paperclip size={14} color={colors.stone400} weight="bold" />
+                    <Text style={styles.cardStatText}>{attachmentsCount}</Text>
+                  </View>
+                )}
+              </View>
+              <View style={styles.cardArrow}>
+                <ArrowUpRight size={16} color={colors.stone400} weight="bold" />
+              </View>
+            </View>
+          </LinearGradient>
+        </Pressable>
+      );
+    },
+    [openArticle, readIds]
+  );
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" />
+      <View style={styles.ambientBg}>
+        <LinearGradient
+          colors={[colors.surface, '#FFF8ED']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <View style={[styles.orb, styles.orbGold]} />
+        <View style={[styles.orb, styles.orbRed]} />
+        <View style={[styles.orb, styles.orbWarm]} />
+      </View>
+
+      <View style={styles.topBarWrap}>
+        <BlurView intensity={60} tint="light" style={styles.topBarBlur}>
+          <View style={[styles.topBar, isScrolled && styles.topBarScrolled]}>
+            <View>
+              <View style={styles.dateRow}>
+                <View style={styles.dateDot} />
+                <Text style={styles.dateText}>{currentDate}</Text>
+              </View>
+              <Text style={styles.pageTitle}>{pageTitle}</Text>
+            </View>
+            <Pressable style={styles.bellButton} onPress={markAllRead}>
+              <Bell size={18} color={colors.stone400} weight="fill" />
+              {hasUnread && <View style={styles.bellDot} />}
+            </Pressable>
+          </View>
+        </BlurView>
+      </View>
+
+      <Animated.View style={[styles.listWrap, { opacity: fadeIn }]}>
+        {isLoading ? (
+          <View style={styles.loadingWrap}>
+            <ActivityIndicator size="small" color={colors.gold500} />
+            <Text style={styles.loadingText}>正在加载今日要闻</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={articles}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={renderItem}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            onScroll={(event) => setIsScrolled(event.nativeEvent.contentOffset.y > 20)}
+            scrollEventThrottle={16}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={refreshArticles}
+                tintColor={colors.gold500}
+              />
+            }
+            ListEmptyComponent={
+              <View style={styles.emptyState}>
+                <Crown size={36} color={colors.gold400} weight="fill" />
+                <Text style={styles.emptyTitle}>今日暂无新通知</Text>
+                <Text style={styles.emptySub}>保持关注，稍后再来看看</Text>
+              </View>
+            }
+          />
+        )}
+      </Animated.View>
+
+      <View style={styles.dockWrap}>
+        <BlurView intensity={60} tint="light" style={styles.dock}>
+          <View style={styles.dockButtonActive}>
+            <House size={22} color={colors.imperial600} weight="fill" />
+          </View>
+          <View style={styles.dockButton}>
+            <Sparkle size={22} color={colors.stone400} weight="bold" />
+          </View>
+          <View style={styles.dockButton}>
+            <Gear size={22} color={colors.stone400} weight="bold" />
+          </View>
+        </BlurView>
+      </View>
+
+      <Modal transparent visible={sheetVisible} animationType="none">
+        <View style={styles.sheetOverlay}>
+          <Pressable style={styles.sheetBackdrop} onPress={closeArticle} />
+          <Animated.View
+            style={[
+              styles.sheetContainer,
+              { transform: [{ translateY: sheetAnim }] },
+            ]}
+          >
+            <View style={styles.sheetHandle} />
+            <Pressable style={styles.sheetClose} onPress={closeArticle}>
+              <X size={16} color={colors.stone500} weight="bold" />
+            </Pressable>
+            <ScrollView
+              contentContainerStyle={styles.sheetContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.detailHeader}>
+                <View style={styles.detailIcon}>
+                  <Buildings size={20} color={colors.imperial600} weight="fill" />
+                </View>
+                <View>
+                  <Text style={styles.detailUnit}>{activeArticle?.unit || '公告'}</Text>
+                  <Text style={styles.detailDate}>
+                    {activeArticle?.published_on || '--'}
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={styles.detailTitle}>{activeArticle?.title || ''}</Text>
+
+              <LinearGradient
+                colors={[colors.stone900, colors.stone800]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.aiCard}
+              >
+                <View style={styles.aiLine} />
+                <View style={styles.aiBadgeRow}>
+                  <Sparkle size={14} color={colors.gold300} weight="fill" />
+                  <Text style={styles.aiBadge}>AI SUMMARY</Text>
+                </View>
+                <Text style={styles.aiText}>
+                  {activeDetail?.summary || activeArticle?.summary || '暂无摘要'}
+                </Text>
+              </LinearGradient>
+
+              <View style={styles.detailContentWrap}>
+                <Text style={styles.detailLead}>各部门、各单位：</Text>
+                <Text style={styles.detailContent}>
+                  {normalizeParagraphs(activeDetail?.content || '') || '暂无正文内容，稍后再试。'}
+                </Text>
+              </View>
+            </ScrollView>
+          </Animated.View>
+        </View>
+      </Modal>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.surface,
+  },
+  ambientBg: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  orb: {
+    position: 'absolute',
+    borderRadius: 999,
+    opacity: 0.5,
+  },
+  orbGold: {
+    width: 320,
+    height: 320,
+    backgroundColor: colors.gold100,
+    top: -60,
+    left: -60,
+  },
+  orbRed: {
+    width: 300,
+    height: 300,
+    backgroundColor: '#F9D7D7',
+    bottom: -60,
+    right: -30,
+  },
+  orbWarm: {
+    width: 220,
+    height: 220,
+    backgroundColor: '#FDEED6',
+    top: '48%',
+    left: '50%',
+    marginLeft: -110,
+    marginTop: -110,
+  },
+  topBarWrap: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 20,
+  },
+  topBarBlur: {
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 10,
+  },
+  topBar: {
     flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderRadius: 28,
+  },
+  topBarScrolled: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  dateDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.gold400,
+  },
+  dateText: {
+    fontSize: 10,
+    letterSpacing: 2.2,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    color: colors.imperial600,
+  },
+  pageTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.stone900,
+  },
+  bellButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.gold100,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+  },
+  bellDot: {
+    position: 'absolute',
+    top: 9,
+    right: 9,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.imperial500,
+    borderWidth: 1,
+    borderColor: colors.white,
+  },
+  listWrap: {
+    flex: 1,
+    paddingTop: 110,
+  },
+  listContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 130,
+  },
+  cardPressable: {
+    marginBottom: 20,
+  },
+  cardPressed: {
+    transform: [{ scale: 0.99 }],
+  },
+  card: {
+    borderRadius: 28,
+    padding: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.7)',
+    shadowColor: '#b8860b',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 10 },
+    overflow: 'hidden',
+  },
+  cardGlow: {
+    position: 'absolute',
+    top: -20,
+    right: -30,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(243, 224, 175, 0.7)',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  cardMetaLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  tag: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  tagHigh: {
+    backgroundColor: colors.imperial50,
+    borderColor: colors.imperial100,
+  },
+  tagNormal: {
+    backgroundColor: colors.stone100,
+    borderColor: colors.stone200,
+  },
+  tagText: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  tagTextHigh: {
+    color: colors.imperial600,
+  },
+  tagTextNormal: {
+    color: colors.stone600,
+  },
+  cardTime: {
+    fontSize: 11,
+    color: colors.stone400,
+    fontWeight: '600',
+  },
+  unreadDot: {
+    width: 12,
+    height: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unreadPulse: {
+    position: 'absolute',
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: colors.imperial400,
+    opacity: 0.4,
+  },
+  unreadCore: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.imperial600,
+  },
+  cardBody: {
+    marginBottom: 18,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.stone900,
+    marginBottom: 8,
+  },
+  cardSummary: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.stone500,
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: colors.stone100,
+  },
+  cardStats: {
+    flexDirection: 'row',
+    gap: 14,
+  },
+  cardStatItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  cardStatText: {
+    fontSize: 12,
+    color: colors.stone400,
+    fontWeight: '600',
+  },
+  cardArrow: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.stone100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingWrap: {
+    marginTop: 120,
+    alignItems: 'center',
+    gap: 10,
+  },
+  loadingText: {
+    fontSize: 12,
+    color: colors.stone500,
+  },
+  emptyState: {
+    marginTop: 100,
     alignItems: 'center',
     gap: 8,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.stone800,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
+  emptySub: {
+    fontSize: 12,
+    color: colors.stone400,
+  },
+  dockWrap: {
     position: 'absolute',
+    bottom: 24,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 20,
+  },
+  dock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 26,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 30,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.6)',
+    backgroundColor: 'rgba(255,255,255,0.6)',
+  },
+  dockButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dockButtonActive: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.imperial50,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+  },
+  sheetOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  sheetBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(28, 25, 23, 0.4)',
+  },
+  sheetContainer: {
+    height: screenHeight * 0.9,
+    backgroundColor: '#FFFEFC',
+    borderTopLeftRadius: 36,
+    borderTopRightRadius: 36,
+    paddingTop: 24,
+    overflow: 'hidden',
+  },
+  sheetHandle: {
+    alignSelf: 'center',
+    width: 52,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.stone200,
+    marginBottom: 16,
+  },
+  sheetClose: {
+    position: 'absolute',
+    top: 16,
+    right: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.stone100,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 5,
+  },
+  sheetContent: {
+    paddingHorizontal: 26,
+    paddingBottom: 40,
+  },
+  detailHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  detailIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.imperial50,
+    borderWidth: 1,
+    borderColor: colors.imperial100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailUnit: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: colors.stone400,
+  },
+  detailDate: {
+    fontSize: 10,
+    color: colors.stone300,
+  },
+  detailTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: colors.stone900,
+    lineHeight: 30,
+    marginBottom: 18,
+  },
+  aiCard: {
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#3A2F2B',
+    overflow: 'hidden',
+  },
+  aiLine: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: colors.gold400,
+  },
+  aiBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 10,
+  },
+  aiBadge: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 2,
+    color: colors.gold300,
+  },
+  aiText: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: '#E7E2D9',
+  },
+  detailContentWrap: {
+    gap: 10,
+  },
+  detailLead: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.stone900,
+  },
+  detailContent: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: colors.stone600,
   },
 });

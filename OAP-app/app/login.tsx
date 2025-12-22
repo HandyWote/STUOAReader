@@ -83,7 +83,8 @@ export default function LoginScreen() {
         style={styles.flex}>
         <ScrollView
           contentContainerStyle={styles.container}
-          showsVerticalScrollIndicator={false}>
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled">
           <View style={styles.brandBlock}>
             <View style={styles.logoBox}>
               <MaterialCommunityIcons name="shield-check" size={28} color={colors.gold50} />
@@ -203,12 +204,13 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     paddingHorizontal: 28,
-    paddingTop: 60,
-    paddingBottom: 40,
-    justifyContent: 'space-between',
+    paddingTop: 44,
+    paddingBottom: 72,
+    justifyContent: 'flex-start',
   },
   brandBlock: {
     gap: 12,
+    marginBottom: 36,
   },
   logoBox: {
     width: 64,
