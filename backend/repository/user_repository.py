@@ -177,6 +177,30 @@ class UserRepository:
             )
             conn.commit()
 
+    def update_credentials(
+        self,
+        user_id: UUID,
+        password_hash: str,
+        password_algo: str,
+        password_cost: int,
+        display_name: str | None = None,
+    ) -> None:
+        now = datetime.now(timezone.utc)
+        with db_session() as conn, conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE users
+                SET password_hash = %s,
+                    password_algo = %s,
+                    password_cost = %s,
+                    display_name = COALESCE(%s, display_name),
+                    updated_at = %s
+                WHERE id = %s
+                """,
+                (password_hash, password_algo, password_cost, display_name, now, user_id),
+            )
+            conn.commit()
+
     def _row_to_user(self, row: dict) -> User:
         return User(
             id=row["id"],

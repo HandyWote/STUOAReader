@@ -60,20 +60,31 @@ class AuthService:
         except NotFoundError:
             if not self.cfg.auth_allow_auto_user_creation or self.campus is None:
                 raise InvalidCredentialsError("invalid credentials")
-            self._verify_with_campus(username, password)
+            display_name = self._verify_with_campus(username, password)
             hashed = self._hash_password(password)
             user = self.repo.create_with_password(
                 username=username,
                 password_hash=hashed,
                 password_algo="bcrypt",
                 password_cost=self._password_cost(),
-                display_name=username,
+                display_name=display_name or username,
             )
             self.log.info("campus authentication success, user created", extra={"username": username, "user_id": str(user.id)})
             cred = self.repo.get_credential(username)
         else:
             if not bcrypt.checkpw(password.encode("utf-8"), cred.password_hash.encode("utf-8")):
-                raise InvalidCredentialsError("invalid credentials")
+                if self.campus is None:
+                    raise InvalidCredentialsError("invalid credentials")
+                display_name = self._verify_with_campus(username, password)
+                hashed = self._hash_password(password)
+                self.repo.update_credentials(
+                    user_id=cred.user_id,
+                    password_hash=hashed,
+                    password_algo="bcrypt",
+                    password_cost=self._password_cost(),
+                    display_name=display_name or username,
+                )
+                cred = self.repo.get_credential(username)
 
         try:
             self.repo.record_login(cred.user_id)
@@ -135,10 +146,10 @@ class AuthService:
             raise UnauthorizedError("token invalid") from exc
         return payload
 
-    def _verify_with_campus(self, username: str, password: str) -> None:
+    def _verify_with_campus(self, username: str, password: str) -> str:
         if self.campus is None:
             raise InvalidCredentialsError("campus auth disabled")
-        self.campus.verify(username, password)
+        return self.campus.verify(username, password)
 
     def _issue_tokens(self, user: User, meta: AuthMetadata) -> AuthResult:
         access_token = self._sign_access_token(user)
