@@ -2,13 +2,10 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Animated,
-  Dimensions,
   FlatList,
-  Modal,
   Pressable,
   RefreshControl,
   SafeAreaView,
-  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -17,61 +14,18 @@ import {
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as SecureStore from 'expo-secure-store';
+import { useRouter } from 'expo-router';
 import {
   ArrowUpRight,
   Bell,
-  Buildings,
   Crown,
-  Eye,
-  Gear,
   Paperclip,
-  Sparkle,
-  X,
-  House,
 } from 'phosphor-react-native';
 
-const colors = {
-  surface: '#FDFCF8',
-  gold50: '#FBF7E8',
-  gold100: '#F5EBC9',
-  gold200: '#F3E0AF',
-  gold300: '#E8C871',
-  gold400: '#D4AF37',
-  gold500: '#B8860B',
-  gold600: '#926F34',
-  imperial50: '#FCECEC',
-  imperial100: '#F7CFCF',
-  imperial400: '#E16C6C',
-  imperial500: '#C02425',
-  imperial600: '#9B1C1C',
-  stone900: '#1C1917',
-  stone800: '#2B211E',
-  stone700: '#3A2F2B',
-  stone600: '#5C524E',
-  stone500: '#6B6461',
-  stone400: '#9A928F',
-  stone300: '#C8C2BF',
-  stone200: '#E6E2DF',
-  stone100: '#F1EFED',
-  white: '#FFFFFF',
-};
-
-type Article = {
-  id: number;
-  title: string;
-  unit?: string;
-  link?: string;
-  published_on?: string;
-  created_at?: string;
-  summary?: string;
-  attachments?: unknown;
-};
-
-type ArticleDetail = Article & {
-  content?: string;
-};
-
-const screenHeight = Dimensions.get('window').height;
+import { ArticleDetailSheet } from '@/components/article-detail-sheet';
+import { BottomDock } from '@/components/bottom-dock';
+import { colors } from '@/constants/palette';
+import type { Article, ArticleDetail } from '@/types/article';
 const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:5000/api';
 
 function formatDateLabel() {
@@ -125,20 +79,8 @@ function getPriority(title: string) {
   return 'normal';
 }
 
-function normalizeParagraphs(text: string) {
-  if (!text) {
-    return '';
-  }
-  const normalized = text
-    .replace(/\r\n/g, '\n')
-    .replace(/[ \t]+/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
-    .replace(/([^\n])\n([^\n])/g, '$1 $2')
-    .trim();
-  return normalized;
-}
-
 export default function HomeScreen() {
+  const router = useRouter();
   const [articles, setArticles] = useState<Article[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -150,7 +92,6 @@ export default function HomeScreen() {
   const [token, setToken] = useState<string | null>(null);
 
   const fadeIn = useRef(new Animated.Value(0)).current;
-  const sheetAnim = useRef(new Animated.Value(screenHeight)).current;
 
   const pageTitle = '今日要闻';
   const currentDate = useMemo(() => formatDateLabel(), []);
@@ -220,12 +161,6 @@ export default function HomeScreen() {
       setSheetVisible(true);
       setReadIds((prev) => ({ ...prev, [article.id]: true }));
 
-      Animated.timing(sheetAnim, {
-        toValue: 0,
-        duration: 450,
-        useNativeDriver: true,
-      }).start();
-
       setActiveDetail(null);
       try {
         const headers: Record<string, string> = {};
@@ -242,20 +177,14 @@ export default function HomeScreen() {
         setActiveDetail(null);
       }
     },
-    [sheetAnim, token]
+    [token]
   );
 
   const closeArticle = useCallback(() => {
-    Animated.timing(sheetAnim, {
-      toValue: screenHeight,
-      duration: 320,
-      useNativeDriver: true,
-    }).start(() => {
-      setSheetVisible(false);
-      setActiveArticle(null);
-      setActiveDetail(null);
-    });
-  }, [sheetAnim]);
+    setSheetVisible(false);
+    setActiveArticle(null);
+    setActiveDetail(null);
+  }, []);
 
   const markAllRead = useCallback(() => {
     setReadIds((prev) => {
@@ -415,77 +344,19 @@ export default function HomeScreen() {
         )}
       </Animated.View>
 
-      <View style={styles.dockWrap}>
-        <BlurView intensity={60} tint="light" style={styles.dock}>
-          <View style={styles.dockButtonActive}>
-            <House size={22} color={colors.imperial600} weight="fill" />
-          </View>
-          <View style={styles.dockButton}>
-            <Sparkle size={22} color={colors.stone400} weight="bold" />
-          </View>
-          <View style={styles.dockButton}>
-            <Gear size={22} color={colors.stone400} weight="bold" />
-          </View>
-        </BlurView>
-      </View>
+      <BottomDock
+        activeTab="home"
+        onHome={() => undefined}
+        onAi={() => router.push('/(tabs)/explore')}
+        onSettings={() => undefined}
+      />
 
-      <Modal transparent visible={sheetVisible} animationType="none">
-        <View style={styles.sheetOverlay}>
-          <Pressable style={styles.sheetBackdrop} onPress={closeArticle} />
-          <Animated.View
-            style={[
-              styles.sheetContainer,
-              { transform: [{ translateY: sheetAnim }] },
-            ]}
-          >
-            <View style={styles.sheetHandle} />
-            <Pressable style={styles.sheetClose} onPress={closeArticle}>
-              <X size={16} color={colors.stone500} weight="bold" />
-            </Pressable>
-            <ScrollView
-              contentContainerStyle={styles.sheetContent}
-              showsVerticalScrollIndicator={false}
-            >
-              <View style={styles.detailHeader}>
-                <View style={styles.detailIcon}>
-                  <Buildings size={20} color={colors.imperial600} weight="fill" />
-                </View>
-                <View>
-                  <Text style={styles.detailUnit}>{activeArticle?.unit || '公告'}</Text>
-                  <Text style={styles.detailDate}>
-                    {activeArticle?.published_on || '--'}
-                  </Text>
-                </View>
-              </View>
-
-              <Text style={styles.detailTitle}>{activeArticle?.title || ''}</Text>
-
-              <LinearGradient
-                colors={[colors.stone900, colors.stone800]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.aiCard}
-              >
-                <View style={styles.aiLine} />
-                <View style={styles.aiBadgeRow}>
-                  <Sparkle size={14} color={colors.gold300} weight="fill" />
-                  <Text style={styles.aiBadge}>AI SUMMARY</Text>
-                </View>
-                <Text style={styles.aiText}>
-                  {activeDetail?.summary || activeArticle?.summary || '暂无摘要'}
-                </Text>
-              </LinearGradient>
-
-              <View style={styles.detailContentWrap}>
-                <Text style={styles.detailLead}>各部门、各单位：</Text>
-                <Text style={styles.detailContent}>
-                  {normalizeParagraphs(activeDetail?.content || '') || '暂无正文内容，稍后再试。'}
-                </Text>
-              </View>
-            </ScrollView>
-          </Animated.View>
-        </View>
-      </Modal>
+      <ArticleDetailSheet
+        visible={sheetVisible}
+        article={activeArticle}
+        detail={activeDetail}
+        onClose={closeArticle}
+      />
     </SafeAreaView>
   );
 }
@@ -762,163 +633,5 @@ const styles = StyleSheet.create({
   emptySub: {
     fontSize: 12,
     color: colors.stone400,
-  },
-  dockWrap: {
-    position: 'absolute',
-    bottom: 24,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    zIndex: 20,
-  },
-  dock: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 26,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 30,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.6)',
-    backgroundColor: 'rgba(255,255,255,0.6)',
-  },
-  dockButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dockButtonActive: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.imperial50,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-  },
-  sheetOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  sheetBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(28, 25, 23, 0.4)',
-  },
-  sheetContainer: {
-    height: screenHeight * 0.9,
-    backgroundColor: '#FFFEFC',
-    borderTopLeftRadius: 36,
-    borderTopRightRadius: 36,
-    paddingTop: 24,
-    overflow: 'hidden',
-  },
-  sheetHandle: {
-    alignSelf: 'center',
-    width: 52,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.stone200,
-    marginBottom: 16,
-  },
-  sheetClose: {
-    position: 'absolute',
-    top: 16,
-    right: 20,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.stone100,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 5,
-  },
-  sheetContent: {
-    paddingHorizontal: 26,
-    paddingBottom: 40,
-  },
-  detailHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 16,
-  },
-  detailIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.imperial50,
-    borderWidth: 1,
-    borderColor: colors.imperial100,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  detailUnit: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: colors.stone400,
-  },
-  detailDate: {
-    fontSize: 10,
-    color: colors.stone300,
-  },
-  detailTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: colors.stone900,
-    lineHeight: 30,
-    marginBottom: 18,
-  },
-  aiCard: {
-    borderRadius: 24,
-    padding: 20,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#3A2F2B',
-    overflow: 'hidden',
-  },
-  aiLine: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-    backgroundColor: colors.gold400,
-  },
-  aiBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 10,
-  },
-  aiBadge: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 2,
-    color: colors.gold300,
-  },
-  aiText: {
-    fontSize: 13,
-    lineHeight: 20,
-    color: '#E7E2D9',
-  },
-  detailContentWrap: {
-    gap: 10,
-  },
-  detailLead: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.stone900,
-  },
-  detailContent: {
-    fontSize: 14,
-    lineHeight: 22,
-    color: colors.stone600,
   },
 });

@@ -61,6 +61,7 @@ export default function LoginScreen() {
 
       await SecureStore.setItemAsync('access_token', data.access_token || '');
       await SecureStore.setItemAsync('refresh_token', data.refresh_token || '');
+      await SecureStore.setItemAsync('user_profile', JSON.stringify(data.user || {}));
 
       router.replace('/(tabs)');
     } catch (err) {

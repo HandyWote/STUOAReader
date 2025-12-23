@@ -22,3 +22,5 @@ test_output.py
 .env
 *.log
 example
+CLAUDE.md
+.claude

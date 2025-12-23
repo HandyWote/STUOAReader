@@ -1,0 +1,26 @@
+export type ArticleAttachment = Record<string, string>;
+
+export type Article = {
+  id: number;
+  title: string;
+  unit?: string;
+  link?: string;
+  published_on?: string;
+  created_at?: string;
+  summary?: string;
+  attachments?: ArticleAttachment[] | null;
+};
+
+export type ArticleDetail = Article & {
+  content?: string;
+};
+
+export type RelatedArticle = {
+  id: number;
+  title: string;
+  unit?: string;
+  published_on?: string;
+  similarity?: number;
+  content_snippet?: string;
+  summary_snippet?: string;
+};

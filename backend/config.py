@@ -35,6 +35,9 @@ class Config:
         self.embed_model: Optional[str] = None
         self.embed_api_key: Optional[str] = None
         self.embed_dim: int = 1024
+        self.ai_base_url: Optional[str] = None
+        self.ai_model: Optional[str] = None
+        self.api_key: Optional[str] = None
         self.ai_vector_limit_days: Optional[int] = None
         self.ai_vector_limit_count: Optional[int] = None
 
@@ -87,6 +90,9 @@ class Config:
             "EMBED_MODEL",
             "EMBED_API_KEY",
             "EMBED_DIM",
+            "AI_BASE_URL",
+            "AI_MODEL",
+            "API_KEY",
             "AI_VECTOR_LIMIT_DAYS",
             "AI_VECTOR_LIMIT_COUNT",
         ]
@@ -150,6 +156,12 @@ class Config:
                 self.embed_dim = int(value)
             except ValueError:
                 pass
+        elif key == "AI_BASE_URL":
+            self.ai_base_url = value or None
+        elif key == "AI_MODEL":
+            self.ai_model = value or None
+        elif key == "API_KEY":
+            self.api_key = value or None
         elif key == "AI_VECTOR_LIMIT_DAYS":
             try:
                 self.ai_vector_limit_days = int(value)

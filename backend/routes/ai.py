@@ -6,8 +6,8 @@
 from __future__ import annotations
 
 import logging
-from datetime import date, timedelta
-from typing import Any
+from datetime import date, datetime, timedelta
+from typing import Any, Iterable
 
 from flask import Blueprint, jsonify, request
 import requests
@@ -152,6 +152,28 @@ def search_similar_articles(query_embedding: list[float], top_k: int = 3) -> lis
         return []
 
 
+def _build_context(articles: list[dict[str, Any]]) -> str:
+    """构建文章上下文。"""
+    context = ""
+    for article in articles:
+        context += f"\n文章标题：{article.get('title')}\n"
+        context += f"发布单位：{article.get('unit')}\n"
+        context += f"发布日期：{article.get('published_on')}\n"
+        context += f"文章内容：{article.get('content') or ''}\n"
+    return context
+
+
+def _build_prompt(query: str, articles: list[dict[str, Any]]) -> str:
+    """构建问答提示词。"""
+    context = _build_context(articles)
+
+    prompt = "你是一个智能问答助手，根据以下提供的文章内容回答用户的问题。\n"
+    prompt += f"\n文章内容：{context}\n"
+    prompt += f"\n用户问题：{query}\n"
+    prompt += "\n请根据文章内容提供准确的回答，不要添加文章中没有的信息。"
+    return prompt
+
+
 def generate_answer(query: str, articles: list[dict[str, Any]]) -> str:
     """根据查询和相关文章生成回答。
     
@@ -165,22 +187,10 @@ def generate_answer(query: str, articles: list[dict[str, Any]]) -> str:
         生成的回答文本
     """
     try:
-        # 准备上下文
-        context = ""
-        for article in articles:
-            context += f"\n文章标题：{article['title']}\n"
-            context += f"发布单位：{article['unit']}\n"
-            context += f"发布日期：{article['published_on']}\n"
-            context += f"文章内容：{article['content']}\n"
-        
-        # 构造AI提示
-        prompt = f"你是一个智能问答助手，根据以下提供的文章内容回答用户的问题。\n"
-        prompt += f"\n文章内容：{context}\n"
-        prompt += f"\n用户问题：{query}\n"
-        prompt += f"\n请根据文章内容提供准确的回答，不要添加文章中没有的信息。"
+        prompt = _build_prompt(query, articles)
         
         # 使用配置的AI服务
-        if config.ai_base_url and config.api_key:
+        if config.ai_base_url and config.api_key and config.ai_model:
             headers = {
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {config.api_key}"
@@ -197,16 +207,57 @@ def generate_answer(query: str, articles: list[dict[str, Any]]) -> str:
             response.raise_for_status()
             
             result = response.json()
+            print(f"[AI non-stream status] {response.status_code}")
+            print("[AI non-stream body]")
+            print(response.text)
             return result["choices"][0]["message"]["content"]
         else:
             logger.error("AI服务配置不完整")
             # 如果没有AI服务，返回相关文章摘要
-            return f"根据相关文章，以下是可能的答案：\n{context}"
+            return f"根据相关文章，以下是可能的答案：\n{_build_context(articles)}"
             
     except Exception as e:
         logger.error(f"生成回答失败: {e}")
         # 返回相关文章信息作为备选
-        return f"无法生成回答，但找到以下相关文章：\n{context}"
+        return f"无法生成回答，但找到以下相关文章：\n{_build_context(articles)}"
+
+
+def _truncate_text(text: str | None, limit: int = 80) -> str:
+    if not text:
+        return ""
+    normalized = " ".join(text.split())
+    if len(normalized) <= limit:
+        return normalized
+    return f"{normalized[:limit].rstrip()}…"
+
+
+def _serialize_value(value: Any) -> Any:
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    if isinstance(value, list):
+        return [_serialize_value(item) for item in value]
+    if isinstance(value, dict):
+        return {key: _serialize_value(val) for key, val in value.items()}
+    return value
+
+
+def _build_related_articles(articles: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    related = []
+    for article in articles:
+        content_snippet = _truncate_text(article.get("content"))
+        summary_snippet = _truncate_text(article.get("summary"))
+        related.append(
+            {
+                "id": article.get("id"),
+                "title": article.get("title"),
+                "unit": article.get("unit"),
+                "published_on": _serialize_value(article.get("published_on")),
+                "similarity": article.get("similarity"),
+                "content_snippet": content_snippet,
+                "summary_snippet": summary_snippet,
+            }
+        )
+    return related
 
 
 @bp.route('/ask', methods=['POST'])
@@ -230,7 +281,9 @@ def ask_question():
         
         question = data['question']
         top_k = data.get('top_k', 3)
-        
+        if not config.ai_base_url or not config.api_key or not config.ai_model:
+            return jsonify({"error": "AI服务配置不完整"}), 500
+
         # 1. 生成问题的向量嵌入
         query_embedding = generate_embedding(question)
         if not query_embedding:
@@ -240,22 +293,16 @@ def ask_question():
         similar_articles = search_similar_articles(query_embedding, top_k)
         if not similar_articles:
             return jsonify({"error": "没有找到相关文章"}), 404
-        
+
+        related_articles = _build_related_articles(similar_articles)
+
         # 3. 生成回答
         answer = generate_answer(question, similar_articles)
         
         # 4. 返回结果
         return jsonify({
             "answer": answer,
-            "related_articles": [
-                {
-                    "id": article["id"],
-                    "title": article["title"],
-                    "unit": article["unit"],
-                    "published_on": article["published_on"],
-                    "similarity": article["similarity"]
-                } for article in similar_articles
-            ]
+            "related_articles": related_articles
         }), 200
         
     except Exception as e:
