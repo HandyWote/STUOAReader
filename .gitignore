@@ -3,7 +3,6 @@ list.jsp
 OA.jsp
 ./spider/events
 ./events
-*.json
 List.txt
 user.db
 想法.txt
@@ -24,3 +23,4 @@ test_output.py
 example
 CLAUDE.md
 .claude
+.vscode/
