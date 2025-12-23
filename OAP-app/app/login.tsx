@@ -15,20 +15,9 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 
-const colors = {
-  surface: '#FDFCF8',
-  gold50: '#FBF7E8',
-  gold400: '#D4AF37',
-  gold500: '#B8860B',
-  gold600: '#926F34',
-  imperial500: '#C02425',
-  imperial600: '#9B1C1C',
-  stone800: '#1C1917',
-  stone700: '#2B211E',
-  stone500: '#6B6461',
-  stone300: '#C8C2BF',
-  white: '#FFFFFF',
-};
+import { AmbientBackground } from '@/components/ambient-background';
+import { colors } from '@/constants/palette';
+import { getApiBaseUrl } from '@/services/api';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -37,7 +26,7 @@ export default function LoginScreen() {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:5000/api';
+  const apiBaseUrl = getApiBaseUrl();
 
   const handleLogin = async () => {
     if (!username.trim() || !password) {
@@ -73,11 +62,7 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View pointerEvents="none" style={styles.ambientBg}>
-        <View style={[styles.orb, styles.orbGold]} />
-        <View style={[styles.orb, styles.orbRed]} />
-        <View style={[styles.orb, styles.orbWarm]} />
-      </View>
+      <AmbientBackground variant="login" />
 
       <KeyboardAvoidingView
         behavior={Platform.select({ ios: 'padding', android: undefined })}
@@ -166,42 +151,6 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
-  ambientBg: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: colors.surface,
-  },
-  orb: {
-    position: 'absolute',
-    borderRadius: 999,
-    opacity: 0.5,
-  },
-  orbGold: {
-    width: 320,
-    height: 320,
-    backgroundColor: '#F5EBC9',
-    top: -60,
-    left: -60,
-  },
-  orbRed: {
-    width: 320,
-    height: 320,
-    backgroundColor: '#F9D7D7',
-    bottom: -40,
-    right: -40,
-  },
-  orbWarm: {
-    width: 220,
-    height: 220,
-    backgroundColor: '#FDEED6',
-    top: '48%',
-    left: '50%',
-    marginLeft: -110,
-    marginTop: -110,
-  },
   container: {
     flexGrow: 1,
     paddingHorizontal: 28,
@@ -231,7 +180,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 42,
     fontWeight: '800',
-    color: colors.stone800,
+    color: colors.stone900,
     lineHeight: 46,
     letterSpacing: -1,
   },
@@ -274,12 +223,12 @@ const styles = StyleSheet.create({
   input: {
     height: 48,
     fontSize: 15,
-    color: colors.stone800,
+    color: colors.stone900,
     fontWeight: '500',
   },
   loginButton: {
     height: 64,
-    backgroundColor: colors.stone800,
+    backgroundColor: colors.stone900,
     borderRadius: 32,
     paddingLeft: 28,
     paddingRight: 10,
@@ -287,8 +236,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: colors.stone700,
-    shadowColor: colors.stone700,
+    borderColor: colors.stone800,
+    shadowColor: colors.stone800,
     shadowOpacity: 0.2,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 8 },
