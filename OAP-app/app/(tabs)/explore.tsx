@@ -211,7 +211,7 @@ export default function AiAssistantScreen() {
         activeTab="ai"
         onHome={() => router.push('/(tabs)')}
         onAi={() => undefined}
-        onSettings={() => undefined}
+        onSettings={() => router.push('/(tabs)/settings')}
       />
 
       <ArticleDetailSheet

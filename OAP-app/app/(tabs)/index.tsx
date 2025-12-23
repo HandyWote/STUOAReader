@@ -124,7 +124,7 @@ export default function HomeScreen() {
         activeTab="home"
         onHome={() => undefined}
         onAi={() => router.push('/(tabs)/explore')}
-        onSettings={() => undefined}
+        onSettings={() => router.push('/(tabs)/settings')}
       />
 
       <ArticleDetailSheet
