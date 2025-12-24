@@ -49,15 +49,6 @@ app.config['JSON_AS_ASCII'] = False  # 支持中文
 # 支持跨域资源共享，允许前端应用从不同域名访问API
 CORS(app, origins=config.cors_allow_origins or ['*'])  # 允许所有来源，生产环境应限制具体域名
 
-# 配置API限流
-# 使用客户端IP作为唯一标识，防止恶意请求
-limiter = Limiter(
-    get_remote_address,  # 限流标识：客户端IP
-    app=app,             # 绑定到Flask应用
-    default_limits=['100 per day', '20 per hour'],  # 默认限流规则
-    storage_uri='memory://'  # 限流数据存储在内存中
-)
-
 # 初始化Redis连接
 # 用于缓存API响应，提升性能并减少数据库压力
 redis_client = None
@@ -75,6 +66,40 @@ except Exception as e:
     logger.error(f"无法连接到Redis服务器: {e}")
     redis_client = None
     # 注意：Redis连接失败不影响API基本功能，只是缓存功能不可用
+
+# 配置API限流
+# 使用真实客户端IP作为唯一标识，避免反向代理导致同IP限流
+def _get_client_ip() -> str:
+    forwarded_for = request.headers.get("X-Forwarded-For", "")
+    if forwarded_for:
+        ip = forwarded_for.split(",")[0].strip()
+        if ip:
+            return ip
+    real_ip = request.headers.get("X-Real-IP", "").strip()
+    if real_ip:
+        return real_ip
+    return get_remote_address()
+
+rate_limits: list[str] = []
+if config.rate_limit_per_day:
+    rate_limits.append(f"{config.rate_limit_per_day} per day")
+if config.rate_limit_per_hour:
+    rate_limits.append(f"{config.rate_limit_per_hour} per hour")
+
+def _build_redis_storage_uri() -> str:
+    if config.redis_password:
+        return f"redis://:{config.redis_password}@{config.redis_host}:{config.redis_port}/{config.redis_db}"
+    return f"redis://{config.redis_host}:{config.redis_port}/{config.redis_db}"
+
+storage_uri = _build_redis_storage_uri() if redis_client else "memory://"
+
+limiter = Limiter(
+    _get_client_ip,
+    app=app,
+    default_limits=rate_limits,
+    storage_uri=storage_uri,
+    enabled=bool(rate_limits),
+)
 
 # 初始化缓存
 # 封装Redis缓存功能，支持304 Not Modified响应

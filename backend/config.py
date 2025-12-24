@@ -30,6 +30,8 @@ class Config:
         self.redis_db: int = 0
         self.redis_password: Optional[str] = None
         self.cors_allow_origins: list[str] = ["*"]
+        self.rate_limit_per_day: Optional[int] = None
+        self.rate_limit_per_hour: Optional[int] = None
         # AI/Embedding（供后端问答接口使用）
         self.embed_base_url: Optional[str] = None
         self.embed_model: Optional[str] = None
@@ -86,6 +88,8 @@ class Config:
             "REDIS_DB",
             "REDIS_PASSWORD",
             "CORS_ALLOW_ORIGINS",
+            "RATE_LIMIT_PER_DAY",
+            "RATE_LIMIT_PER_HOUR",
             "EMBED_BASE_URL",
             "EMBED_MODEL",
             "EMBED_API_KEY",
@@ -145,6 +149,18 @@ class Config:
             self.redis_password = value or None
         elif key == "CORS_ALLOW_ORIGINS":
             self.cors_allow_origins = [part.strip() for part in value.split(",") if part.strip()]
+        elif key == "RATE_LIMIT_PER_DAY":
+            try:
+                limit = int(value)
+                self.rate_limit_per_day = limit if limit > 0 else None
+            except ValueError:
+                pass
+        elif key == "RATE_LIMIT_PER_HOUR":
+            try:
+                limit = int(value)
+                self.rate_limit_per_hour = limit if limit > 0 else None
+            except ValueError:
+                pass
         elif key == "EMBED_BASE_URL":
             self.embed_base_url = value or None
         elif key == "EMBED_MODEL":
