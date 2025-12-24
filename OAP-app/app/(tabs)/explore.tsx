@@ -1,3 +1,5 @@
+//AI部分前端页面
+
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
