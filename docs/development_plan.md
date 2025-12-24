@@ -2,8 +2,22 @@
 
 ## 概览
 - 目标：用增量爬虫 + 后端 API + Expo RN APP 实现 OA 当日文章的抓取、摘要、通知和问答。
-- 调度：每天 07:00–24:00 每小时执行一次；`--date` 可补抓历史。
+- 调度：外部 cron 每小时触发；`--date` 可补抓历史。
 - 数据流：爬虫抓当日 → AI 摘要 → 入库（文章+附件元数据+当日向量）→ 后端 API 提供增量查询/问答 → APP 轮询 + 本地通知。
+
+## 当前完成情况（基于代码核对）
+- ✅ 爬虫：增量爬取、详情解析与附件元数据、AI 摘要（重试）、入库、向量生成、缓存清理。
+- ✅ 后端：认证（账号密码 + 校园认证校验）、文章接口、AI 问答/向量、ETag/Last-Modified、限流。
+- ✅ APP：登录、首页列表/详情、AI 助手（引用/高亮/Markdown/Mermaid）、通知管理（Android）、个人中心。
+- ⏳ APP：token 自动刷新（access 过期需重新登录）。
+- ⏳ 监控与结构化日志：待补。
+
+## 已弃用 / 不再实现
+- SSO token 换 JWT（改为账号密码登录 + 校园认证校验）。
+- 代理模式问答（`/ai/ask/proxy`）。
+- 阅读状态同步接口（`/articles/read`）。
+- 通知测试接口（`/notifications/test`）。
+- 内置调度器（统一改为外部 cron）。
 
 ## 后端（Flask + Postgres + Redis）
 1) **数据模型**
@@ -14,7 +28,7 @@
    - 鉴权：`POST /auth/token`（用户名/密码登录，校园认证校验）、`POST /auth/token/refresh`.
    - 文章：`GET /articles?date=YYYY-MM-DD&since=ts`（增量列表，含附件元数据、ETag/Last-Modified 支持 304）；`GET /articles/:id`。
    - AI：`POST /ai/ask`（官方模型，向量检索范围由后端配置控制：`AI_VECTOR_LIMIT_DAYS`/`AI_VECTOR_LIMIT_COUNT`）。
-   - 通知测试：可选 `/notifications/test`。
+   - 通知测试：已弃用 `/notifications/test`。
    - 阅读状态接口：不做（由客户端本地维护）。
 3) **缓存与优化**
    - Redis 缓存最新列表摘要，配合 `If-None-Match/If-Modified-Since` 返回 304。
@@ -42,15 +56,15 @@
 
 ## APP（Expo React Native）
 1) **基础栈**
-   - `expo-router`, `@tanstack/react-query`（持久化 mmkv）, `axios`, `react-native-mmkv`, `expo-secure-store`, `expo-file-system`, `expo-notifications`, `expo-background-fetch`, `expo-task-manager`.
+   - `expo-router`, `expo-secure-store`, `expo-notifications`, `expo-background-fetch`, `expo-task-manager`, `react-native-webview`, `react-native-markdown-display`.
 2) **鉴权**
-   - 登录页采用账号/密码输入表单（替代“开启今日阅读”CTA），后端签发 JWT；secure-store 保存 access/refresh，拦截器自动刷新。
+   - 登录页采用账号/密码输入表单（替代“开启今日阅读”CTA），后端签发 JWT；secure-store 保存 access/refresh（当前无自动刷新）。
 3) **数据与缓存**
-   - 列表/详情通过后端 API；react-query 持久化；正文/附件元数据缓存到本地（附件不下载）。
+   - 列表/详情通过后端 API；正文/附件元数据展示（附件不下载）。
    - 未读状态：由客户端本地维护（后端不记录已读）。
 4) **轮询与通知**
-   - 后台轮询（默认 1 小时，可在 07:00–24:00 生效），`/articles?since=ts` 增量获取；发现新文章触发本地通知 + 红点/角标。
-   - 前台可短轮询/下拉刷新；弱网离线可看缓存。
+   - Android 后台轮询（08:00–24:00，每 2 小时 + 0–15 分钟抖动），`/articles?since=ts` 增量获取；发现新文章触发本地通知。
+   - 前台支持下拉刷新。
 5) **AI 问答**
    - 官方模式：调用后端 `/ai/ask`，向量检索范围由后端配置控制（按条数或天数）。
 6) **AI 助手（问答 + 引用材料）**
@@ -60,12 +74,12 @@
    - Markdown + Mermaid：前端渲染 Markdown；遇到 ```mermaid``` 片段用 WebView 渲染。
    - 用户称呼：基于登录返回的 `display_name/username` + 本地时间段（上午/下午/晚上）。
    - UI：严格对齐 `OAP-app/原型.html` 的 AI 助手区块（排版、色彩、间距、动效）。
-6) **体验**
+7) **体验**
    - 通知开关/静音时段、轮询间隔（受系统最小值限制）。
    - 列表搜索/筛选可后续迭代。
-7) **个人中心展示**
+8) **个人中心展示**
    - 仅展示头像、姓名与 VIP 标识（不显示部门信息）。
-8) **设置页与通知（已确认）**
+9) **设置页与通知（已确认）**
    - 页面标题固定“个人中心”，样式严格对齐 `OAP-app/原型.html` 的设置页区块。
    - 头像：显示 `display_name` 首字；无则取 `username` 首字；再无显示 `?`。不做头像上传。
    - 项目项：仅保留“通知管理”；“模型配置”不做。
@@ -82,7 +96,7 @@
 
 ### 模块划分
 1. **爬虫模块** (`spider/`)
-   - `CrawlerScheduler`: 调度器（07:00–24:00 每小时执行）
+   - `CrawlerScheduler`: 外部 cron 调度（07:00–24:00 每小时执行）
    - `OACrawler`: 增量爬虫（去重、附件解析）
    - `AttachmentParser`: 附件 DOM 解析
    - `IncrementalTracker`: 增量跟踪
@@ -99,7 +113,7 @@
 4. **AI 服务模块** (`ai/`)
    - `Summarizer`: 摘要生成（重试机制）
    - `EmbeddingGenerator`: 向量生成（OpenAI/本地）
-   - `AIService`: 问答服务（官方+代理模式）
+   - `AIService`: 问答服务（官方模式；代理模式已弃用）
 
 5. **监控模块** (`monitoring/`)
    - 爬虫成功率、接口延迟、轮询量、AI 调用量
@@ -109,7 +123,7 @@
 调度器触发 → 爬虫抓取当日列表 → 去重检查 → 解析详情+附件 → AI 摘要生成 → 入库文章表 → 生成向量 → 更新缓存 → 后端 API 提供服务 → APP 轮询增量 → 触发本地通知。
 
 ### 增量抓取逻辑
-1. 每小时运行（07:00–24:00），`--date` 参数支持补抓
+1. 外部 cron 每小时运行（07:00–24:00），`--date` 参数支持补抓
 2. 全量扫描当天列表，过滤出目标日期的条目
 3. 去重：查询数据库当日已存在的 `link` 集合，跳过已处理条目
 4. 解析附件元数据（不下载文件）
@@ -119,7 +133,7 @@
 ### AI 摘要与向量化
 - **摘要生成**: 使用配置的 AI 模型（如 GLM-4.5-flash），重试机制保障可靠性
 - **向量生成**: 使用 OpenAI 或本地 embedding 模型，存储为 pgvector 格式
-- **问答服务**: 基于当日向量的相似性检索，提供官方和代理两种模式
+- **问答服务**: 基于向量的相似性检索，提供官方模式
 
 ### 路线图与时间估算
 1. **阶段 1: 基础数据库与爬虫重构** (3 天) – 建立数据库，实现增量爬虫
@@ -134,8 +148,8 @@
 - **语言**: Python 3.10+
 - **数据库**: PostgreSQL + pgvector
 - **缓存**: Redis
-- **后端**: Flask, SQLAlchemy, JWT
-- **爬虫**: requests, BeautifulSoup, schedule
+- **后端**: Flask, psycopg, JWT
+- **爬虫**: requests, BeautifulSoup
 - **AI**: OpenAI API / 智谱 GLM / sentence-transformers
 - **部署**: Docker, Docker Compose
 

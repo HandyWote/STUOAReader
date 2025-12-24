@@ -1,11 +1,9 @@
-# OAP 后端 API 文档（以开发计划为准）
+# OAP 后端 API 文档（当前实现）
 
 ## 概述
 
-本文档描述 OAP 后端 API 的**规划接口**与行为约定，以 `docs/development_plan.md` 为主口径。
-目标能力包含：SSO 登录换取 JWT、文章增量查询、阅读状态同步、当日向量问答，以及代理模式的 AI 透传。
-
-> 说明：当前实现可能与本接口存在差异，后续以开发计划为准统一调整。
+本文档描述 **当前已实现** 的后端 API 与行为约定，并标注已弃用/未实现部分。
+当前能力包含：账号密码登录（含校园认证校验）、文章增量查询、向量问答。
 
 ## 技术栈
 
@@ -13,35 +11,31 @@
 - **数据库**: PostgreSQL（支持 pgvector）
 - **缓存**: Redis
 - **认证**: JWT
-- **限流**: Flask-Limiter（计划）
-- **CORS**: Flask-CORS（计划）
+- **限流**: Flask-Limiter（默认：100/day, 20/hour）
+- **CORS**: Flask-CORS
 
 ## 基本信息
 
 ### 基础 URL
 
-开发环境：`http://localhost:5000/api/`
+生产环境：`oap-backend.handywote.top/api`（协议以部署为准）
+开发环境：`http://localhost:4420/api`
 
 ### 认证
 
-- `POST /auth/login`：SSO 交换 JWT
-- `POST /auth/refresh`：刷新 JWT
+- `POST /auth/token`：用户名/密码登录（后端进行校园认证校验）
+- `POST /auth/token/refresh`：刷新 JWT
+- `POST /auth/logout`：登出（刷新令牌失效）
+- `GET /auth/me`：获取当前用户信息
 - 请求头：`Authorization: Bearer <access_token>`
+- 说明：文章接口当前未强制鉴权；AI 接口要求鉴权
 
 ### 缓存
 
 - 文章列表支持 `ETag/Last-Modified`，客户端使用 `If-None-Match/If-Modified-Since` 获取 304。
+- 文章详情支持 `ETag`（无 `Last-Modified`）。
 
 ### 响应格式
-
-成功响应：
-
-```json
-{
-  "status": "success",
-  "data": {}
-}
-```
 
 错误响应：
 
@@ -51,21 +45,24 @@
 }
 ```
 
+成功响应：按端点返回业务字段（不额外包裹 `status`）。
+
 ## API 端点
 
 ### 1. 认证模块
 
-#### 1.1 SSO 登录换取 JWT
+#### 1.1 用户名/密码登录
 
 ```
-POST /auth/login
+POST /auth/token
 ```
 
 **请求体**:
 
 ```json
 {
-  "sso_token": "your_sso_token"
+  "username": "your_username",
+  "password": "your_password"
 }
 ```
 
@@ -75,14 +72,21 @@ POST /auth/login
 {
   "access_token": "jwt_access",
   "refresh_token": "jwt_refresh",
-  "expires_in": 1800
+  "token_type": "bearer",
+  "expires_in": 1800,
+  "user": {
+    "id": "uuid",
+    "username": "username",
+    "display_name": "用户名称",
+    "roles": []
+  }
 }
 ```
 
 #### 1.2 刷新访问令牌
 
 ```
-POST /auth/refresh
+POST /auth/token/refresh
 ```
 
 **请求体**:
@@ -98,7 +102,53 @@ POST /auth/refresh
 ```json
 {
   "access_token": "jwt_access",
-  "expires_in": 1800
+  "refresh_token": "jwt_refresh",
+  "token_type": "bearer",
+  "expires_in": 1800,
+  "user": {
+    "id": "uuid",
+    "username": "username",
+    "display_name": "用户名称",
+    "roles": []
+  }
+}
+```
+
+#### 1.3 登出
+
+```
+POST /auth/logout
+```
+
+**请求体**:
+
+```json
+{
+  "refresh_token": "jwt_refresh"
+}
+```
+
+**响应**:
+
+```json
+{
+  "message": "已登出"
+}
+```
+
+#### 1.4 获取当前用户信息
+
+```
+GET /auth/me
+```
+
+**响应**:
+
+```json
+{
+  "user_id": "uuid",
+  "display_name": "用户名称",
+  "roles": []
 }
 ```
 
@@ -112,7 +162,7 @@ GET /articles?date=YYYY-MM-DD&since=ts
 
 **查询参数**:
 - `date`: 指定日期（默认当天）
-- `since`: 增量时间戳（可选）
+- `since`: 增量时间戳（可选，秒或毫秒）
 
 **响应**:
 
@@ -162,31 +212,24 @@ GET /articles/{article_id}
 }
 ```
 
-#### 2.3 批量标记已读
+#### 2.3 获取最新文章
 
 ```
-POST /articles/read
+GET /articles/latest?count=10
 ```
 
-**请求体**:
+**查询参数**:
+- `count`: 返回数量（默认 10）
 
-```json
-{
-  "article_ids": [1, 2, 3]
-}
+#### 2.4 获取指定日期文章
+
 ```
-
-**响应**:
-
-```json
-{
-  "status": "success"
-}
+GET /articles/by-date/YYYY-MM-DD
 ```
 
 ### 3. AI 问答模块
 
-#### 3.1 官方模式问答（仅当日向量）
+#### 3.1 官方模式问答（按配置限制向量范围）
 
 ```
 POST /ai/ask
@@ -212,27 +255,25 @@ POST /ai/ask
       "title": "相关文章标题",
       "unit": "发布单位",
       "published_on": "2023-06-15",
-      "similarity": 0.95
+      "similarity": 0.95,
+      "content_snippet": "正文片段",
+      "summary_snippet": "摘要片段"
     }
   ]
 }
 ```
 
-#### 3.2 代理模式问答（透传用户模型）
+#### 3.2 生成向量嵌入
 
 ```
-POST /ai/ask/proxy
+POST /ai/embed
 ```
 
 **请求体**:
 
 ```json
 {
-  "question": "你的问题",
-  "top_k": 3,
-  "base_url": "https://api.example.com",
-  "api_key": "user_api_key",
-  "model": "model_name"
+  "text": "要生成嵌入的文本"
 }
 ```
 
@@ -240,16 +281,23 @@ POST /ai/ask/proxy
 
 ```json
 {
-  "answer": "AI生成的回答",
-  "related_articles": []
+  "embedding": []
 }
 ```
 
-### 4. 通知测试（可选）
+## 已完成 / 已弃用 / 未实现
 
-```
-POST /notifications/test
-```
+### 已完成
+- 认证：`/auth/token`、`/auth/token/refresh`、`/auth/logout`、`/auth/me`
+- 文章：`/articles/`、`/articles/<id>`、`/articles/latest`、`/articles/by-date/<date>`
+- AI：`/ai/ask`、`/ai/embed`
+- 缓存：列表 `ETag/Last-Modified`，详情 `ETag`
+
+### 已弃用（不再实现）
+- SSO token 换 JWT（原 `/auth/login`）
+- 代理模式问答（`/ai/ask/proxy`）
+- 阅读状态同步（`/articles/read`）
+- 通知测试（`/notifications/test`）
 
 ## 错误码
 
@@ -267,21 +315,26 @@ POST /notifications/test
 
 ### 环境变量
 
-**必填（来自开发计划）**：
+**核心配置**：
 - `DATABASE_URL`
-- `API_KEY`
+- `AUTH_JWT_SECRET`
+- `AUTH_REFRESH_HASH_KEY`
+
+**AI/Embedding（AI 问答使用）**：
 - `AI_BASE_URL`
 - `AI_MODEL`
+- `API_KEY`
 - `EMBED_BASE_URL`
 - `EMBED_MODEL`
 - `EMBED_API_KEY`
 - `EMBED_DIM`（默认 1024）
 
-**后端运行建议**：
-- `SECRET_KEY`（JWT 签名）
+**可选**：
 - `REDIS_HOST`/`REDIS_PORT`/`REDIS_DB`/`REDIS_PASSWORD`
+- `AI_VECTOR_LIMIT_DAYS`
+- `AI_VECTOR_LIMIT_COUNT`
 
-### 依赖安装
+### 依赖安装（后端）
 
 ```bash
 uv sync
@@ -289,7 +342,7 @@ uv sync
 
 ### 启动服务
 
-请以实际后端入口为准（当前文档不绑定具体启动命令）。
+以实际后端入口为准，`backend/app.py` 默认端口为 4420。
 
 ## 开发与测试
 
