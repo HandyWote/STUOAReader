@@ -11,7 +11,14 @@ from typing import Any, Iterable, List
 
 import psycopg
 
-from crawler.db import fetch_article_ids, fetch_existing_links, init_db, insert_articles, insert_embeddings
+from crawler.db import (
+    fetch_article_ids,
+    fetch_articles_by_date,
+    fetch_existing_links,
+    init_db,
+    insert_articles,
+    insert_embeddings,
+)
 from crawler.models import ArticleRecord
 
 
@@ -81,3 +88,7 @@ class ArticleRepository:
             int: 成功插入的向量数
         """
         return insert_embeddings(conn, payloads)
+
+    def fetch_for_cache(self, conn: psycopg.Connection, target_date: str) -> List[dict[str, Any]]:
+        """获取指定日期的文章列表与详情，用于Redis缓存预热。"""
+        return fetch_articles_by_date(conn, target_date)

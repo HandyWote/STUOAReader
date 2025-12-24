@@ -163,6 +163,20 @@ def fetch_article_ids(conn: psycopg.Connection, links: list[str]) -> list[dict[s
     return list(rows)
 
 
+def fetch_articles_by_date(conn: psycopg.Connection, target_date: str) -> list[dict[str, Any]]:
+    """获取指定日期的完整文章信息（用于缓存预热）。"""
+    sql = """
+    SELECT id, title, unit, link, published_on, summary, attachments, created_at, updated_at, content
+    FROM articles
+    WHERE published_on = %s
+    ORDER BY created_at DESC, id DESC
+    """
+    with conn.cursor() as cur:
+        cur.execute(sql, (target_date,))
+        rows = cur.fetchall()
+    return list(rows)
+
+
 def insert_embeddings(conn: psycopg.Connection, payloads: Iterable[dict[str, Any]]) -> int:
     """批量插入文章向量记录，已存在的article_id会被忽略。
     
