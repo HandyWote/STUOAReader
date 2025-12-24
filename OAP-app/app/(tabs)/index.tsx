@@ -5,8 +5,6 @@ import {
   RefreshControl,
   StatusBar,
   StyleSheet,
-  View,
-  Platform,
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -89,17 +87,14 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" />
       <AmbientBackground variant="home" />
-
-      <View style={{  }}>
-        <TopBar
-          variant="home"
-          title={pageTitle}
-          dateText={currentDate}
-          isScrolled={isScrolled}
-          hasUnread={hasUnread}
-          onPressAction={markAllRead}
-        />
-      </View>
+      <TopBar
+        variant="home"
+        title={pageTitle}
+        dateText={currentDate}
+        isScrolled={isScrolled}
+        hasUnread={hasUnread}
+        onPressAction={markAllRead}
+      />
 
       <Animated.View style={[styles.listWrap, { opacity: fadeIn }]}>
         {isLoading ? (
@@ -155,6 +150,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 20,
-    paddingBottom: 30,
+    paddingBottom: 130,
   },
 });
