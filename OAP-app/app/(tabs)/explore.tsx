@@ -204,13 +204,7 @@ export default function AiAssistantScreen() {
           )}
         </ScrollView>
 
-        <View style={styles.inputPositionWrap}> {/* 新增外层View控制位置 */}
-          <ChatInput 
-            value={input} 
-            onChangeText={setInput} 
-            onSend={sendChatMessage} 
-          />
-        </View>
+        <ChatInput value={input} onChangeText={setInput} onSend={sendChatMessage} />
       </KeyboardAvoidingView>
 
       <BottomDock
@@ -257,19 +251,6 @@ const markdownStyles = {
 };
 
 const styles = StyleSheet.create({
-  
-  inputPositionWrap: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    // 适配iOS底部安全区（iPhone X/11+）和Android导航栏
-    paddingBottom: Platform.OS === 'ios' ? 90 : 90, 
-    // 加边框区分聊天区，可选
-    backgroundColor: 'transparent',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.stone200,
-  },
-
-  // ... 原有样式
   safeArea: {
     flex: 1,
     backgroundColor: colors.surface,
