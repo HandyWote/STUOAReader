@@ -1,12 +1,12 @@
-FROM python:3.11-slim
-
+FROM hub.docker.com/r/astral/uv:python3.11-trixie
 WORKDIR /app
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV UV_SYSTEM_PYTHON=1
 
-COPY requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r /app/requirements.txt
+COPY pyproject.toml uv.lock /app/
+RUN uv sync --frozen --no-dev
 
 COPY . /app/backend
 ENV PYTHONPATH=/app
