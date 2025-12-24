@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Bell } from 'phosphor-react-native';
 
@@ -30,12 +30,14 @@ export function TopBar({
         <BlurView intensity={60} tint="light" style={styles.homeBlur}>
           <View style={[styles.homeBar, isScrolled && styles.homeBarScrolled]}>
             <View>
+              {/* 左侧：日期 + 标题 */}
               <View style={styles.dateRowHome}>
                 <View style={styles.dateDot} />
                 <Text style={styles.dateTextHome}>{dateText}</Text>
               </View>
               <Text style={styles.homeTitle}>{title}</Text>
             </View>
+            {/* 右侧：铃铛按钮 */}
             <Pressable style={styles.bellButton} onPress={onPressAction}>
               <Bell size={18} color={colors.stone400} weight="fill" />
               {hasUnread && <View style={styles.bellDot} />}
@@ -66,14 +68,16 @@ export function TopBar({
 const styles = StyleSheet.create({
   homeWrap: {
     position: 'absolute',
-    top: 0,
+    // 原top: 0 → 改成iOS往下移，Android保持0
+    top: Platform.OS === 'ios' ? -20 : 0, // iOS往下移20px，可按需调（比如30/40）
     left: 0,
     right: 0,
     zIndex: 20,
   },
   homeBlur: {
     paddingHorizontal: 20,
-    paddingTop: 18,
+    // 原paddingTop: 18 → iOS加更多顶部内边距
+    paddingTop: Platform.OS === 'ios' ? 20 : 18,
     paddingBottom: 10,
   },
   homeBar: {
