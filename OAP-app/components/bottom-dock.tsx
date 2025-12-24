@@ -67,20 +67,30 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
+    // 新增：给外层容器加左右边距，让圆角不贴屏幕边缘（更明显）
+    paddingHorizontal: 20, 
   },
   dock: {
     paddingHorizontal: 22,
     paddingVertical: 12,
-    borderRadius: 999,
+    // 1. 调整圆角大小（999是全圆角，可改小如32/40；想更圆润保留999即可）
+    borderRadius: 999, 
     flexDirection: 'row',
     gap: 24,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.7)',
+    // 2. 新增：避免内容溢出圆角（BlurView可能导致边缘漏出）
+    overflow: 'hidden', 
+    // 3. 可选：加轻微内阴影，强化圆角质感
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 1, // Android阴影兼容
   },
   dockButton: {
     width: 44,
     height: 44,
-    borderRadius: 16,
+    borderRadius: 16, // 单个按钮的圆角（保持不变即可）
     alignItems: 'center',
     justifyContent: 'center',
   },
