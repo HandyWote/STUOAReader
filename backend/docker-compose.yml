@@ -1,3 +1,4 @@
+
 services:
   backend:
     build:
@@ -5,8 +6,6 @@ services:
       dockerfile: Dockerfile
     env_file:
       - .env
-    working_dir: /app/backend
-    command: python -m backend.app
     ports:
       - "4420:4420"
-    restart: always
+    restart: unless-stopped

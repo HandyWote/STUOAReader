@@ -1,14 +1,18 @@
-FROM hub.docker.com/r/astral/uv:python3.11-trixie
-WORKDIR /app
+FROM docker.1ms.run/python:3.11-slim
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-ENV UV_SYSTEM_PYTHON=1
+WORKDIR /app/backend
 
-COPY pyproject.toml uv.lock /app/
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app
+
+RUN pip install --no-cache-dir uv -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev
 
-COPY . /app/backend
-ENV PYTHONPATH=/app
+COPY . .
 
-CMD ["python", "-m", "backend.app"]
+EXPOSE 4420
+
+CMD ["uv", "run", "flask", "--app", "app", "run", "--host", "0.0.0.0", "--port", "4420"]
