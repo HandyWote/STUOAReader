@@ -9,6 +9,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Markdown from 'react-native-markdown-display';
 import { WebView } from 'react-native-webview';
@@ -61,8 +62,13 @@ export default function AiAssistantScreen() {
   const displayName = useDisplayName('用户');
   const mermaidScript = useMermaidScript();
   const { messages, isThinking, sendChat } = useAiChat(token);
+  const insets = useSafeAreaInsets();
 
   const greeting = useMemo(() => `${getDayPeriod(new Date())}，${displayName}`, [displayName]);
+  const dockHeight = 68;
+  const dockSpacing = 24;
+  const inputHeight = 64;
+  const dockOffset = dockHeight + dockSpacing + insets.bottom;
 
   const scrollToEnd = useCallback(() => {
     requestAnimationFrame(() => {
@@ -164,7 +170,10 @@ export default function AiAssistantScreen() {
       >
         <ScrollView
           ref={scrollRef}
-          contentContainerStyle={styles.chatContainer}
+          contentContainerStyle={[
+            styles.chatContainer,
+            { paddingBottom: dockOffset + inputHeight + 24 },
+          ]}
           showsVerticalScrollIndicator={false}
           onContentSizeChange={scrollToEnd}
         >
@@ -206,7 +215,9 @@ export default function AiAssistantScreen() {
           )}
         </ScrollView>
 
-        <ChatInput value={input} onChangeText={setInput} onSend={sendChatMessage} />
+        <View style={{ paddingBottom: dockOffset }}>
+          <ChatInput value={input} onChangeText={setInput} onSend={sendChatMessage} />
+        </View>
       </KeyboardAvoidingView>
 
       <BottomDock
