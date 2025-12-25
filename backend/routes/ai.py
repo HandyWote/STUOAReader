@@ -48,6 +48,29 @@ def _normalize_ai_base_url(raw_url: str | None) -> str | None:
     return url
 
 
+def _format_message_for_log(message: BaseMessage) -> dict[str, Any]:
+    payload: dict[str, Any] = {"type": message.__class__.__name__}
+    content = getattr(message, "content", None)
+    if isinstance(content, str):
+        payload["content_len"] = len(content)
+        payload["content_preview"] = content[:200]
+    tool_calls = getattr(message, "tool_calls", None)
+    if tool_calls:
+        payload["tool_calls"] = tool_calls
+    tool_call_id = getattr(message, "tool_call_id", None)
+    if tool_call_id:
+        payload["tool_call_id"] = tool_call_id
+    return payload
+
+
+def _log_messages(stage: str, messages: list[BaseMessage]) -> None:
+    logger.info(
+        "AI请求messages(%s): %s",
+        stage,
+        json.dumps([_format_message_for_log(msg) for msg in messages], ensure_ascii=False),
+    )
+
+
 def generate_embedding(text: str) -> list[float] | None:
     """生成文本的向量嵌入。
     
@@ -248,6 +271,7 @@ def _build_agent() -> Any:
     llm_with_tools = llm.bind_tools(tools)
 
     def agent_node(state: AgentState) -> dict[str, list[BaseMessage]]:
+        _log_messages("before_llm", state["messages"])
         response = llm_with_tools.invoke(state["messages"])
         return {"messages": state["messages"] + [response]}
 
