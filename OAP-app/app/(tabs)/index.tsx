@@ -91,7 +91,7 @@ export default function HomeScreen() {
       <StatusBar barStyle="dark-content" />
       <AmbientBackground variant="home" />
       <TopBar
-        variant="home"
+        variant="explore"
         title={pageTitle}
         dateText={currentDate}
         isScrolled={isScrolled}

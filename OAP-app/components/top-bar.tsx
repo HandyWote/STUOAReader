@@ -57,6 +57,12 @@ export function TopBar({
             </View>
             <Text style={styles.exploreTitle}>{title}</Text>
           </View>
+          {onPressAction && (
+            <Pressable style={styles.bellButton} onPress={onPressAction}>
+              <Bell size={18} color={colors.stone400} weight="fill" />
+              {hasUnread && <View style={styles.bellDot} />}
+            </Pressable>
+          )}
         </View>
       </BlurView>
     </View>
@@ -98,6 +104,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   exploreBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 18,
     paddingVertical: 14,
   },
