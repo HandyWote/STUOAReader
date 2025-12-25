@@ -14,20 +14,25 @@ export default function RootLayout() {
   const segments = useSegments();
   const { token, isLoading } = useAuthTokenState();
 
+  // 初始化通知任务（仅执行一次）
   useEffect(() => {
     registerNotificationTaskIfEnabled();
   }, []);
 
+  // 核心路由守卫逻辑（权限拦截+自动跳转）
   useEffect(() => {
-    if (isLoading || segments.length === 0) {
-      return;
-    }
+    if (isLoading) return;
+
     const first = segments[0];
     const inLogin = first === 'login';
+
+    // 未登录且不在登录页 → 强制跳登录页
     if (!token && !inLogin) {
       router.replace('/login');
       return;
     }
+
+    // 已登录且在登录页 → 强制跳首页
     if (token && inLogin) {
       router.replace('/(tabs)');
     }
@@ -38,7 +43,14 @@ export default function RootLayout() {
       <Stack initialRouteName="login">
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+        <Stack.Screen 
+          name="modal" 
+          options={{ 
+            presentation: 'modal', 
+            title: 'Modal',
+            headerShown: true // 弹窗页保留导航栏，提升用户体验
+          }} 
+        />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
