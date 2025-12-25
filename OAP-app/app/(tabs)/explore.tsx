@@ -363,9 +363,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white, // 背景色
     alignItems: 'center', // 水平居中
     justifyContent: 'center', // 垂直居中
-    shadowColor: colors.gold500, // 阴影颜色
-    shadowOpacity: 0.12, // 阴影透明度
-    shadowRadius: 16, // 阴影半径
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.gold500, // 阴影颜色
+        shadowOpacity: 0.12, // 阴影透明度
+        shadowRadius: 16, // 阴影半径
+      },
+      android: {
+        elevation: 3,
+      },
+      web: {
+        boxShadow: '0px 0px 16px rgba(184, 134, 11, 0.12)',
+      },
+    }),
   },
   emptyTitle: {
     marginTop: 18, // 顶部外边距

@@ -35,14 +35,14 @@ export function TopBar({
         <BlurView intensity={60} tint="light" style={styles.homeBlur}>
           <View style={[styles.homeBar, isScrolled && styles.homeBarScrolled]}>
             <View>
-              // 左侧：日期 + 标题
+              {/* 左侧：日期 + 标题 */}
               <View style={styles.dateRowHome}>
                 <View style={styles.dateDot} />
                 <Text style={styles.dateTextHome}>{dateText}</Text>
               </View>
               <Text style={styles.homeTitle}>{title}</Text>
             </View>
-            // 右侧：铃铛按钮
+            {/* 右侧：铃铛按钮 */}
             <Pressable style={styles.bellButton} onPress={onPressAction}>
               <Bell size={18} color={colors.stone400} weight="fill" />
               {hasUnread && <View style={styles.bellDot} />}
@@ -177,10 +177,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.gold100,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOpacity: 0.06,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 6 },
+      },
+      android: {
+        elevation: 3,
+      },
+      web: {
+        boxShadow: '0px 6px 10px rgba(0, 0, 0, 0.06)',
+      },
+    }),
   },
   // 未读通知红点样式
   bellDot: {

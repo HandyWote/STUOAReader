@@ -22,7 +22,7 @@ export default function TabLayout() {
         tabBarButton: HapticTab, // 使用自定义的触觉反馈标签按钮
         tabBarStyle: { display: 'none' }, // 隐藏默认标签栏（使用自定义BottomDock）
       }}>
-      // 首页标签页
+      {/* 首页标签页 */}
       <Tabs.Screen
         name="index"
         options={{
@@ -30,7 +30,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
         }}
       />
-      // 探索标签页
+      {/* 探索标签页 */}
       <Tabs.Screen
         name="explore"
         options={{
@@ -38,7 +38,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
         }}
       />
-      // 设置标签页
+      {/* 设置标签页 */}
       <Tabs.Screen
         name="settings"
         options={{

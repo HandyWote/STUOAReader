@@ -20,14 +20,14 @@ export function AmbientBackground({ variant }: AmbientBackgroundProps) {
   if (variant === 'home') {
     return (
       <View style={styles.ambientBg}>
-        // 渐变背景层
+        {/* 渐变背景层 */}
         <LinearGradient
           colors={[colors.surface, colors.surfaceWarm]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFillObject}
         />
-        // 三个装饰性圆形光晕
+        {/* 三个装饰性圆形光晕 */}
         <View style={[styles.orb, styles.orbGold]} />
         <View style={[styles.orb, styles.orbRed]} />
         <View style={[styles.orb, styles.orbWarmHome]} />

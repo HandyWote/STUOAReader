@@ -1,7 +1,7 @@
 // 个人中心设置页面
 // 主要功能：展示用户信息、VIP状态、通知管理和退出登录功能
 import React, { useCallback, useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient'; // 渐变背景组件
 import { useRouter } from 'expo-router'; // 路由导航
 import { BellRinging, CaretRight } from 'phosphor-react-native'; // 图标组件
@@ -153,10 +153,20 @@ const styles = StyleSheet.create({
     height: 96, // 高度
     borderRadius: 48, // 圆形
     padding: 4, // 内边距
-    shadowColor: colors.gold200, // 阴影颜色
-    shadowOpacity: 0.6, // 阴影透明度
-    shadowRadius: 10, // 阴影半径
-    shadowOffset: { width: 0, height: 6 }, // 阴影偏移
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.gold200, // 阴影颜色
+        shadowOpacity: 0.6, // 阴影透明度
+        shadowRadius: 10, // 阴影半径
+        shadowOffset: { width: 0, height: 6 }, // 阴影偏移
+      },
+      android: {
+        elevation: 3,
+      },
+      web: {
+        boxShadow: '0px 6px 10px rgba(243, 224, 175, 0.6)',
+      },
+    }),
   },
   // 头像内部样式
   avatarInner: {
@@ -216,10 +226,20 @@ const styles = StyleSheet.create({
     borderWidth: 1, // 边框宽度
     borderColor: 'rgba(255,255,255,0.8)', // 边框颜色
     padding: 8, // 内边距
-    shadowColor: '#000', // 阴影颜色
-    shadowOpacity: 0.04, // 阴影透明度
-    shadowRadius: 10, // 阴影半径
-    shadowOffset: { width: 0, height: 6 }, // 阴影偏移
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000', // 阴影颜色
+        shadowOpacity: 0.04, // 阴影透明度
+        shadowRadius: 10, // 阴影半径
+        shadowOffset: { width: 0, height: 6 }, // 阴影偏移
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0px 6px 10px rgba(0, 0, 0, 0.04)',
+      },
+    }),
   },
   // 卡片行样式
   cardRow: {
@@ -262,10 +282,20 @@ const styles = StyleSheet.create({
     borderWidth: 1, // 边框宽度
     borderColor: colors.imperial100, // 边框颜色
     alignItems: 'center', // 水平居中
-    shadowColor: '#000', // 阴影颜色
-    shadowOpacity: 0.04, // 阴影透明度
-    shadowRadius: 10, // 阴影半径
-    shadowOffset: { width: 0, height: 6 }, // 阴影偏移
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000', // 阴影颜色
+        shadowOpacity: 0.04, // 阴影透明度
+        shadowRadius: 10, // 阴影半径
+        shadowOffset: { width: 0, height: 6 }, // 阴影偏移
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0px 6px 10px rgba(0, 0, 0, 0.04)',
+      },
+    }),
   },
   // 退出登录按钮按下样式
   logoutPressed: {

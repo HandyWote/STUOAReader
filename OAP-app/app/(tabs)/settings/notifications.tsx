@@ -141,10 +141,20 @@ const styles = StyleSheet.create({
     borderWidth: 1, // 边框宽度
     borderColor: 'rgba(255,255,255,0.8)', // 边框颜色
     padding: 8, // 内边距
-    shadowColor: '#000', // 阴影颜色
-    shadowOpacity: 0.04, // 阴影透明度
-    shadowRadius: 10, // 阴影半径
-    shadowOffset: { width: 0, height: 6 }, // 阴影偏移
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000', // 阴影颜色
+        shadowOpacity: 0.04, // 阴影透明度
+        shadowRadius: 10, // 阴影半径
+        shadowOffset: { width: 0, height: 6 }, // 阴影偏移
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0px 6px 10px rgba(0, 0, 0, 0.04)',
+      },
+    }),
   },
   // 卡片行样式
   cardRow: {

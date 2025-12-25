@@ -1,7 +1,7 @@
 // 聊天输入框组件
 // 主要功能：提供文本输入区域和发送按钮，用于用户与AI对话
 import React from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { ArrowUp } from 'phosphor-react-native';
 
 import { colors } from '@/constants/palette';
@@ -67,8 +67,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.imperial600,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.imperial600,
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.imperial600,
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 4,
+      },
+      web: {
+        boxShadow: '0px 0px 10px rgba(155, 28, 28, 0.3)',
+      },
+    }),
   },
 });

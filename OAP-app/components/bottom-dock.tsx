@@ -1,7 +1,7 @@
 // 底部导航栏组件
 // 主要功能：提供首页、AI助理和设置三个标签的导航，使用模糊背景和圆角设计
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Gear, House, Sparkle } from 'phosphor-react-native';
 
@@ -95,10 +95,20 @@ const styles = StyleSheet.create({
     // 2. 新增：避免内容溢出圆角（BlurView可能导致边缘漏出）
     overflow: 'hidden', 
     // 3. 可选：加轻微内阴影，强化圆角质感
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 1, // Android阴影兼容
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 1,
+      },
+      web: {
+        boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.08)',
+      },
+    }),
   },
   // 导航按钮样式
   dockButton: {
@@ -111,22 +121,52 @@ const styles = StyleSheet.create({
   // 首页按钮激活样式：紫色背景
   dockButtonHome: {
     backgroundColor: colors.imperial50,
-    shadowColor: colors.imperial500,
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.imperial500,
+        shadowOpacity: 0.18,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0px 0px 12px rgba(192, 36, 37, 0.18)',
+      },
+    }),
   },
   // AI助理按钮激活样式：金色背景
   dockButtonAi: {
     backgroundColor: colors.gold50,
-    shadowColor: colors.gold500,
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.gold500,
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0px 0px 12px rgba(184, 134, 11, 0.15)',
+      },
+    }),
   },
   // 设置按钮激活样式：灰色背景
   dockButtonSettings: {
     backgroundColor: colors.stone100,
-    shadowColor: colors.stone500,
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.stone500,
+        shadowOpacity: 0.12,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0px 0px 10px rgba(107, 100, 97, 0.12)',
+      },
+    }),
   },
 });
