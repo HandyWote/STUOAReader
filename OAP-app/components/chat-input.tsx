@@ -1,13 +1,16 @@
+// 聊天输入框组件
+// 主要功能：提供文本输入区域和发送按钮，用于用户与AI对话
 import React from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { ArrowUp } from 'phosphor-react-native';
 
 import { colors } from '@/constants/palette';
 
+// 聊天输入框属性类型
 type ChatInputProps = {
-  value: string;
-  onChangeText: (value: string) => void;
-  onSend: () => void;
+  value: string; // 输入框的当前值
+  onChangeText: (value: string) => void; // 输入文本变更回调
+  onSend: () => void; // 发送消息回调
 };
 
 export function ChatInput({ value, onChangeText, onSend }: ChatInputProps) {
@@ -32,10 +35,12 @@ export function ChatInput({ value, onChangeText, onSend }: ChatInputProps) {
 }
 
 const styles = StyleSheet.create({
+  // 输入框外层容器样式：左右边距和底部边距
   inputWrap: {
     paddingHorizontal: 18,
     paddingBottom: 12,
   },
+  // 输入框外壳样式：圆角容器，白色半透明背景
   inputShell: {
     borderRadius: 26,
     padding: 6,
@@ -43,6 +48,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.8)',
   },
+  // 文本输入框样式
   input: {
     paddingLeft: 16,
     paddingRight: 56,
@@ -50,6 +56,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.stone800,
   },
+  // 发送按钮样式：圆形按钮，紫色背景
   sendButton: {
     position: 'absolute',
     right: 10,

@@ -1,3 +1,5 @@
+// 文章卡片组件
+// 主要功能：展示文章的标题、摘要、时间标签、未读状态、附件数量等信息，支持点击交互
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -7,13 +9,14 @@ import { colors } from '@/constants/palette';
 import type { Article } from '@/types/article';
 import { formatTimeLabel } from '@/utils/date';
 
+// 文章卡片属性类型
 type ArticleCardProps = {
-  article: Article;
-  index: number;
-  isRead: boolean;
-  attachmentsCount: number;
-  priority: 'high' | 'normal';
-  onPress: (article: Article) => void;
+  article: Article; // 文章数据
+  index: number; // 文章索引
+  isRead: boolean; // 是否已读
+  attachmentsCount: number; // 附件数量
+  priority: 'high' | 'normal'; // 优先级
+  onPress: (article: Article) => void; // 点击回调函数
 };
 
 export function ArticleCard({
