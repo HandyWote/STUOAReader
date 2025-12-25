@@ -1,78 +1,122 @@
+/**
+ * 登录页面
+ * 核心功能：
+ * 1. 用户账号密码输入验证
+ * 2. 登录请求发送与响应处理
+ * 3. 认证令牌存储与管理
+ * 4. 登录成功后的页面跳转
+ * 5. 错误信息显示与处理
+ * 6. 加载状态展示
+ * 7. 键盘适配与响应式布局
+ */
+
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+  ActivityIndicator, // 加载指示器
+  KeyboardAvoidingView, // 键盘避免视图
+  Platform, // 平台检测
+  Pressable, // 可按压组件
+  ScrollView, // 滚动视图
+  StyleSheet, // 样式表
+  Text, // 文本组件
+  TextInput, // 文本输入框
+  View, // 视图组件
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
+import { SafeAreaView } from 'react-native-safe-area-context'; // 安全区域视图
+import { MaterialCommunityIcons } from '@expo/vector-icons'; // Expo图标库
+import { useRouter } from 'expo-router'; // 路由导航
+import * as SecureStore from 'expo-secure-store'; // 安全存储
 
-import { AmbientBackground } from '@/components/ambient-background';
-import { colors } from '@/constants/palette';
-import { getApiBaseUrl } from '@/services/api';
-import { setAuthToken } from '@/hooks/use-auth-token';
+// 导入自定义组件和工具
+import { AmbientBackground } from '@/components/ambient-background'; // 背景效果组件
+import { colors } from '@/constants/palette'; // 颜色常量
+import { getApiBaseUrl } from '@/services/api'; // 获取API基础URL
+import { setAuthToken } from '@/hooks/use-auth-token'; // 设置认证令牌
 
+/**
+ * 登录页面组件
+ */
 export default function LoginScreen() {
+  // 路由实例，用于页面跳转
   const router = useRouter();
+  // 用户名输入状态
   const [username, setUsername] = useState('');
+  // 密码输入状态
   const [password, setPassword] = useState('');
+  // 错误信息状态
   const [error, setError] = useState('');
+  // 提交状态（用于显示加载指示器）
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // 获取API基础URL
   const apiBaseUrl = getApiBaseUrl();
 
+  /**
+   * 处理登录请求
+   * 1. 验证输入
+   * 2. 发送登录请求
+   * 3. 处理响应
+   * 4. 存储令牌
+   * 5. 跳转到主页面
+   */
   const handleLogin = async () => {
+    // 验证输入是否为空
     if (!username.trim() || !password) {
       setError('请输入账号和密码');
       return;
     }
 
+    // 清空错误信息并设置提交状态
     setError('');
     setIsSubmitting(true);
     try {
+      // 发送登录请求
       const resp = await fetch(`${apiBaseUrl}/auth/token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: username.trim(), password }),
       });
+      // 解析响应数据
       const data = await resp.json();
+      // 处理错误响应
       if (!resp.ok) {
         setError(data?.error || '登录失败，请检查账号或密码');
         return;
       }
 
+      // 存储认证令牌和用户信息
       await SecureStore.setItemAsync('access_token', data.access_token || '');
       await SecureStore.setItemAsync('refresh_token', data.refresh_token || '');
       await SecureStore.setItemAsync('user_profile', JSON.stringify(data.user || {}));
+      // 更新认证令牌状态
       setAuthToken(data.access_token || null);
 
+      // 登录成功，跳转到主页面
       router.replace('/(tabs)');
     } catch (err) {
+      // 处理网络异常
       setError('网络异常，请稍后重试');
     } finally {
+      // 无论成功失败，都结束提交状态
       setIsSubmitting(false);
     }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      {/* 背景效果 */}
       <AmbientBackground variant="login" />
 
+      {/* 键盘避免视图 */}
       <KeyboardAvoidingView
         behavior={Platform.select({ ios: 'padding', android: undefined })}
         style={styles.flex}>
+        {/* 滚动视图（处理键盘弹出时的内容滚动） */}
         <ScrollView
           contentContainerStyle={styles.container}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled">
+          {/* 品牌信息区块 */}
           <View style={styles.brandBlock}>
             <View style={styles.logoBox}>
               <MaterialCommunityIcons name="shield-check" size={28} color={colors.gold50} />
@@ -84,7 +128,9 @@ export default function LoginScreen() {
             <Text style={styles.subtitle}>每日摘要 · 尊享智能</Text>
           </View>
 
+          {/* 登录表单区块 */}
           <View style={styles.formBlock}>
+            {/* 用户名输入组 */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>账号</Text>
               <View style={styles.inputShell}>
@@ -99,6 +145,7 @@ export default function LoginScreen() {
               </View>
             </View>
 
+            {/* 密码输入组 */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>密码</Text>
               <View style={styles.inputShell}>
@@ -113,17 +160,20 @@ export default function LoginScreen() {
               </View>
             </View>
 
+            {/* 登录按钮 */}
             <Pressable onPress={handleLogin} style={({ pressed }) => [
               styles.loginButton,
               isSubmitting && styles.loginButtonDisabled,
               pressed && styles.loginButtonPressed,
             ]} disabled={isSubmitting}>
+              {/* 加载状态显示 */}
               {isSubmitting ? (
                 <View style={styles.loadingRow}>
                   <ActivityIndicator size="small" color={colors.gold400} />
                   <Text style={styles.loginButtonText}>登录中...</Text>
                 </View>
               ) : (
+                // 正常状态显示
                 <>
                   <Text style={styles.loginButtonText}>登录</Text>
                   <View style={styles.loginButtonIcon}>
@@ -132,8 +182,10 @@ export default function LoginScreen() {
                 </>
               )}
             </Pressable>
+            {/* 错误信息显示 */}
             {!!error && <Text style={styles.errorText}>{error}</Text>}
 
+            {/* 安全认证标识 */}
             <View style={styles.secureRow}>
               <MaterialCommunityIcons name="shield-check" size={14} color={colors.gold500} />
               <Text style={styles.secureText}>ENTERPRISE SECURE</Text>
