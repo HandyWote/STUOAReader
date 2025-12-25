@@ -25,5 +25,44 @@ def db_session():
     finally:
         conn.close()
 
+def init_db() -> None:
+    dim = cfg.embed_dim
+    statements = [
+        "CREATE EXTENSION IF NOT EXISTS vector;",
+        """
+        CREATE TABLE IF NOT EXISTS articles (
+            id BIGSERIAL PRIMARY KEY,
+            title TEXT NOT NULL,
+            unit TEXT,
+            link TEXT NOT NULL UNIQUE,
+            published_on DATE NOT NULL,
+            content TEXT NOT NULL,
+            summary TEXT NOT NULL,
+            attachments JSONB DEFAULT '[]'::jsonb,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        """,
+        "CREATE INDEX IF NOT EXISTS idx_articles_published_on ON articles (published_on);",
+        f"""
+        CREATE TABLE IF NOT EXISTS vectors (
+            id BIGSERIAL PRIMARY KEY,
+            article_id BIGINT REFERENCES articles(id) ON DELETE CASCADE,
+            embedding vector({dim}),
+            published_on DATE NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        """,
+        "CREATE INDEX IF NOT EXISTS idx_vectors_published_on ON vectors (published_on);",
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_vectors_article ON vectors(article_id);",
+        "CREATE INDEX IF NOT EXISTS idx_vectors_embedding_hnsw ON vectors USING hnsw (embedding vector_cosine_ops);",
+    ]
 
-__all__ = ["db_session", "get_connection"]
+    with get_connection() as conn, conn.cursor() as cur:
+        for stmt in statements:
+            cur.execute(stmt)
+        conn.commit()
+
+
+__all__ = ["db_session", "get_connection", "init_db"]

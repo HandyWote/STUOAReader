@@ -22,6 +22,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from backend.config import Config
+from backend.db import init_db
 
 # 初始化配置
 config = Config()
@@ -48,6 +49,13 @@ app.config['JSON_AS_ASCII'] = False  # 支持中文
 # 配置CORS
 # 支持跨域资源共享，允许前端应用从不同域名访问API
 CORS(app, origins=config.cors_allow_origins or ['*'])  # 允许所有来源，生产环境应限制具体域名
+
+# 初始化数据库结构与索引（幂等）
+try:
+    init_db()
+    logger.info("数据库初始化/迁移完成")
+except Exception as e:
+    logger.error(f"数据库初始化/迁移失败: {e}")
 
 # 初始化Redis连接
 # 用于缓存API响应，提升性能并减少数据库压力

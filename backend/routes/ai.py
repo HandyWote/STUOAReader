@@ -6,15 +6,23 @@
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timedelta
-from typing import Any, Iterable
+from datetime import date, datetime
+from typing import Any, Iterable, TypedDict
+import json
+from functools import lru_cache
 
 from flask import Blueprint, jsonify, request
 import requests
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
+from langchain_core.tools import tool
+from langgraph.graph import StateGraph, END
+from langgraph.prebuilt import ToolNode, tools_condition
 
 from backend.db import db_session
 from backend.routes.auth import login_required
 from backend.config import Config
+from backend.utils.redis_cache import get_cache
 
 # 初始化蓝图
 bp = Blueprint('ai', __name__)
@@ -24,6 +32,10 @@ logger = logging.getLogger(__name__)
 
 # 配置
 config = Config()
+cache = get_cache()
+
+MEMORY_TTL_SECONDS = 24 * 60 * 60
+MEMORY_MAX_ITEMS = 5
 
 
 def generate_embedding(text: str) -> list[float] | None:
@@ -78,53 +90,26 @@ def search_similar_articles(query_embedding: list[float], top_k: int = 3) -> lis
         # pgvector的向量格式：["0.1,0.2,0.3,..."]
         vector_str = "[" + ",".join(map(str, query_embedding)) + "]"
 
-        filters: list[str] = []
-        params: list[Any] = []
-        limit_days = config.ai_vector_limit_days
-        limit_count = config.ai_vector_limit_count
+        recency_weight = max(config.ai_recency_weight, 0.0)
+        half_life_days = max(config.ai_recency_half_life_days, 1.0)
+        candidate_limit = min(max(top_k * 5, top_k), 50)
 
-        if limit_days is not None and limit_days > 0:
-            cutoff = date.today() - timedelta(days=limit_days - 1)
-            filters.append("v.published_on >= %s")
-            params.append(cutoff)
-        else:
-            limit_days = None
-
-        if limit_count is not None and limit_count <= 0:
-            limit_count = None
-
-        where_clause = ""
-        if filters:
-            where_clause = "WHERE " + " AND ".join(filters)
-
-        if limit_count:
-            sql = f"""
-            WITH candidate AS (
-                SELECT a.id, a.title, a.unit, a.published_on, a.summary, a.content, v.embedding, v.created_at
-                FROM vectors v
-                JOIN articles a ON v.article_id = a.id
-                {where_clause}
-                ORDER BY v.created_at DESC
-                LIMIT %s
-            )
-            SELECT id, title, unit, published_on, summary, content,
-                   embedding <=> %s::vector AS similarity
-            FROM candidate
-            ORDER BY similarity ASC
-            LIMIT %s
-            """
-            params.extend([limit_count, vector_str, top_k])
-        else:
-            sql = f"""
+        sql = """
+        WITH candidate AS (
             SELECT a.id, a.title, a.unit, a.published_on, a.summary, a.content,
-                   v.embedding <=> %s::vector AS similarity  -- 计算余弦相似度
+                   v.embedding <=> %s::vector AS similarity
             FROM vectors v
-            JOIN articles a ON v.article_id = a.id  -- 关联文章表
-            {where_clause}
-            ORDER BY similarity ASC  -- 按相似度升序排列（值越小越相似）
-            LIMIT %s  -- 返回前top_k条
-            """
-            params.extend([vector_str, top_k])
+            JOIN articles a ON v.article_id = a.id
+            ORDER BY v.embedding <=> %s::vector
+            LIMIT %s
+        )
+        SELECT id, title, unit, published_on, summary, content, similarity,
+               similarity - %s * exp(-GREATEST(date_part('day', CURRENT_DATE - published_on), 0) / %s) AS score
+        FROM candidate
+        ORDER BY score ASC
+        LIMIT %s
+        """
+        params: list[Any] = [vector_str, vector_str, candidate_limit, recency_weight, half_life_days, top_k]
         
         # 3. 执行查询
         with db_session() as conn, conn.cursor() as cur:
@@ -141,7 +126,8 @@ def search_similar_articles(query_embedding: list[float], top_k: int = 3) -> lis
                 "published_on": row["published_on"],
                 "summary": row["summary"],
                 "content": row["content"],
-                "similarity": float(row["similarity"])
+                "similarity": float(row["similarity"]),
+                "score": float(row["score"])
             }
             articles.append(article)
         
@@ -152,75 +138,143 @@ def search_similar_articles(query_embedding: list[float], top_k: int = 3) -> lis
         return []
 
 
-def _build_context(articles: list[dict[str, Any]]) -> str:
-    """构建文章上下文。"""
-    context = ""
+def _memory_key(user_id: str) -> str:
+    return f"ai:mem:{user_id}"
+
+
+def _load_short_memory(user_id: str) -> list[dict[str, str]]:
+    if not cache:
+        return []
+    raw = cache.get(_memory_key(user_id), default=[])
+    if isinstance(raw, list):
+        return [item for item in raw if isinstance(item, dict)]
+    return []
+
+
+def _save_short_memory(user_id: str, question: str, answer: str) -> None:
+    if not cache:
+        return
+    history = _load_short_memory(user_id)
+    history.append({"user": question, "assistant": answer})
+    history = history[-MEMORY_MAX_ITEMS:]
+    cache.set(_memory_key(user_id), history, expire_seconds=MEMORY_TTL_SECONDS)
+
+
+def _build_memory_messages(history: list[dict[str, str]]) -> list[BaseMessage]:
+    messages: list[BaseMessage] = []
+    for item in history:
+        user_text = (item.get("user") or "").strip()
+        assistant_text = (item.get("assistant") or "").strip()
+        if user_text:
+            messages.append(HumanMessage(content=user_text))
+        if assistant_text:
+            messages.append(AIMessage(content=assistant_text))
+    return messages
+
+
+def _build_system_prompt(top_k_hint: int) -> str:
+    return (
+        "你是校内OA智能助理。你可以选择是否调用向量检索工具获取OA文章内容。\n"
+        "只有在需要引用或解释OA文章时才调用工具。\n"
+        "调用工具时可设置 top_k (1-10)。用户期望 top_k 参考值为 "
+        f"{top_k_hint}。\n"
+        "工具参数 detail_level:\n"
+        "- brief: 适合关键词查询、单一事实、简单问答，仅返回摘要/片段。\n"
+        "- full: 适合复杂问题（推理、对比、多事件统筹、政策解读），返回全文内容。\n"
+        "若不调用工具，请直接回答用户问题。\n"
+        "若调用工具，请根据工具返回内容作答，不要编造OA中不存在的信息。"
+    )
+
+
+@tool("vector_search")
+def vector_search_tool(query: str, top_k: int = 3, detail_level: str = "brief") -> str:
+    """OA向量检索工具：返回相关文章内容与摘要。"""
+    normalized_top_k = max(1, min(10, int(top_k)))
+    normalized_level = "full" if detail_level == "full" else "brief"
+    embedding = generate_embedding(query)
+    if not embedding:
+        payload = {"error": "embedding_failed", "documents": [], "related_articles": []}
+        return json.dumps(payload, ensure_ascii=False)
+
+    articles = search_similar_articles(embedding, normalized_top_k)
+    related_articles = _build_related_articles(articles)
+    documents = []
     for article in articles:
-        context += f"\n文章标题：{article.get('title')}\n"
-        context += f"发布单位：{article.get('unit')}\n"
-        context += f"发布日期：{article.get('published_on')}\n"
-        context += f"文章内容：{article.get('content') or ''}\n"
-    return context
-
-
-def _build_prompt(query: str, articles: list[dict[str, Any]]) -> str:
-    """构建问答提示词。"""
-    context = _build_context(articles)
-
-    prompt = "你是一个智能问答助手，根据以下提供的文章内容回答用户的问题。\n"
-    prompt += f"\n文章内容：{context}\n"
-    prompt += f"\n用户问题：{query}\n"
-    prompt += "\n请根据文章内容提供准确的回答，不要添加文章中没有的信息。"
-    return prompt
-
-
-def generate_answer(query: str, articles: list[dict[str, Any]]) -> str:
-    """根据查询和相关文章生成回答。
-    
-    使用AI模型生成自然语言回答。
-    
-    参数：
-        query: 用户的查询
-        articles: 相关的文章列表
-        
-    返回：
-        生成的回答文本
-    """
-    try:
-        prompt = _build_prompt(query, articles)
-        
-        # 使用配置的AI服务
-        if config.ai_base_url and config.api_key and config.ai_model:
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {config.api_key}"
-            }
-            payload = {
-                "model": config.ai_model,
-                "messages": [
-                    {"role": "system", "content": "你是一个智能问答助手，根据提供的文章内容回答用户的问题。"},
-                    {"role": "user", "content": prompt}
-                ]
-            }
-            
-            response = requests.post(config.ai_base_url, headers=headers, json=payload, timeout=30)
-            response.raise_for_status()
-            
-            result = response.json()
-            print(f"[AI non-stream status] {response.status_code}")
-            print("[AI non-stream body]")
-            print(response.text)
-            return result["choices"][0]["message"]["content"]
+        doc = {
+            "id": article.get("id"),
+            "title": article.get("title"),
+            "unit": article.get("unit"),
+            "published_on": _serialize_value(article.get("published_on")),
+            "summary": article.get("summary"),
+        }
+        if normalized_level == "full":
+            doc["content"] = article.get("content") or ""
         else:
-            logger.error("AI服务配置不完整")
-            # 如果没有AI服务，返回相关文章摘要
-            return f"根据相关文章，以下是可能的答案：\n{_build_context(articles)}"
-            
-    except Exception as e:
-        logger.error(f"生成回答失败: {e}")
-        # 返回相关文章信息作为备选
-        return f"无法生成回答，但找到以下相关文章：\n{_build_context(articles)}"
+            doc["content_snippet"] = _truncate_text(article.get("content"))
+            doc["summary_snippet"] = _truncate_text(article.get("summary"))
+        documents.append(doc)
 
+    payload = {
+        "detail_level": normalized_level,
+        "documents": documents,
+        "related_articles": related_articles,
+    }
+    return json.dumps(payload, ensure_ascii=False)
+
+
+class AgentState(TypedDict):
+    messages: list[BaseMessage]
+
+
+@lru_cache(maxsize=1)
+def _build_agent() -> Any:
+    tools = [vector_search_tool]
+    llm = ChatOpenAI(
+        api_key=config.api_key,
+        base_url=config.ai_base_url,
+        model=config.ai_model,
+        temperature=0.2,
+    )
+    llm_with_tools = llm.bind_tools(tools)
+
+    def agent_node(state: AgentState) -> dict[str, list[BaseMessage]]:
+        response = llm_with_tools.invoke(state["messages"])
+        return {"messages": state["messages"] + [response]}
+
+    graph = StateGraph(AgentState)
+    graph.add_node("agent", agent_node)
+    graph.add_node("tools", ToolNode(tools))
+    graph.add_conditional_edges("agent", tools_condition, {"tools": "tools", END: END})
+    graph.add_edge("tools", "agent")
+    graph.set_entry_point("agent")
+    return graph.compile()
+
+
+def _extract_related_articles(messages: list[BaseMessage]) -> list[dict[str, Any]]:
+    related: list[dict[str, Any]] = []
+    for message in messages:
+        if not isinstance(message, ToolMessage):
+            continue
+        try:
+            payload = json.loads(message.content)
+        except (TypeError, json.JSONDecodeError):
+            continue
+        items = payload.get("related_articles")
+        if isinstance(items, list):
+            related = items
+    return related
+
+
+def _extract_answer(messages: list[BaseMessage]) -> str:
+    for message in reversed(messages):
+        if isinstance(message, AIMessage) and message.content:
+            if getattr(message, "tool_calls", None):
+                continue
+            return message.content
+    for message in reversed(messages):
+        if isinstance(message, AIMessage) and message.content:
+            return message.content
+    return ""
 
 def _truncate_text(text: str | None, limit: int = 80) -> str:
     if not text:
@@ -280,26 +334,29 @@ def ask_question():
             return jsonify({"error": "请求参数错误，缺少question字段"}), 400
         
         question = data['question']
-        top_k = data.get('top_k', 3)
+        top_k_hint = data.get('top_k', 3)
         if not config.ai_base_url or not config.api_key or not config.ai_model:
             return jsonify({"error": "AI服务配置不完整"}), 500
 
-        # 1. 生成问题的向量嵌入
-        query_embedding = generate_embedding(question)
-        if not query_embedding:
-            return jsonify({"error": "生成问题向量失败"}), 500
-        
-        # 2. 搜索相似的文章
-        similar_articles = search_similar_articles(query_embedding, top_k)
-        if not similar_articles:
-            return jsonify({"error": "没有找到相关文章"}), 404
+        user_claims = getattr(request, "auth_claims", {})
+        user_id = str(user_claims.get("sub") or "")
+        history = _load_short_memory(user_id) if user_id else []
 
-        related_articles = _build_related_articles(similar_articles)
+        messages: list[BaseMessage] = [
+            SystemMessage(content=_build_system_prompt(top_k_hint)),
+            *_build_memory_messages(history),
+            HumanMessage(content=question),
+        ]
 
-        # 3. 生成回答
-        answer = generate_answer(question, similar_articles)
-        
-        # 4. 返回结果
+        agent = _build_agent()
+        result = agent.invoke({"messages": messages})
+        final_messages = result.get("messages", messages)
+        answer = _extract_answer(final_messages) or "当前服务不可用，请稍后再试。"
+        related_articles = _extract_related_articles(final_messages)
+
+        if user_id:
+            _save_short_memory(user_id, question, answer)
+
         return jsonify({
             "answer": answer,
             "related_articles": related_articles

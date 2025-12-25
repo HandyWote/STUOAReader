@@ -42,6 +42,8 @@ class Config:
         self.api_key: Optional[str] = None
         self.ai_vector_limit_days: Optional[int] = None
         self.ai_vector_limit_count: Optional[int] = None
+        self.ai_recency_half_life_days: float = 180.0
+        self.ai_recency_weight: float = 0.2
 
         self.load()
 
@@ -99,6 +101,8 @@ class Config:
             "API_KEY",
             "AI_VECTOR_LIMIT_DAYS",
             "AI_VECTOR_LIMIT_COUNT",
+            "AI_RECENCY_HALF_LIFE_DAYS",
+            "AI_RECENCY_WEIGHT",
         ]
         for key in keys:
             value = os.getenv(key)
@@ -186,6 +190,16 @@ class Config:
         elif key == "AI_VECTOR_LIMIT_COUNT":
             try:
                 self.ai_vector_limit_count = int(value)
+            except ValueError:
+                pass
+        elif key == "AI_RECENCY_HALF_LIFE_DAYS":
+            try:
+                self.ai_recency_half_life_days = float(value)
+            except ValueError:
+                pass
+        elif key == "AI_RECENCY_WEIGHT":
+            try:
+                self.ai_recency_weight = float(value)
             except ValueError:
                 pass
 
