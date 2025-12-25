@@ -11,6 +11,7 @@ import 'react-native-reanimated';
 
 import { useAuthTokenState } from '@/hooks/use-auth-token';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { refreshSessionOnForeground } from '@/services/auth';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -23,6 +24,32 @@ export default function RootLayout() {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!isMounted) {
+      return;
+    }
+
+    const refreshIfVisible = () => {
+      if (document.visibilityState === 'visible') {
+        void refreshSessionOnForeground();
+      }
+    };
+
+    refreshIfVisible();
+
+    const handleVisibility = () => {
+      refreshIfVisible();
+    };
+
+    window.addEventListener('focus', refreshIfVisible);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('focus', refreshIfVisible);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [isMounted]);
 
   useEffect(() => {
     if (!isMounted || isLoading) return;

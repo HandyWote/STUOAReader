@@ -1,17 +1,9 @@
 // 统一管理登录状态（Token）的全局状态工具
 // 主要功能：管理用户认证令牌的存储、读取和状态同步
-// 支持双端适配：App 端使用 SecureStore，Web 端使用 localStorage
 
 import { useEffect, useSyncExternalStore } from 'react';
 
-// 核心：区分环境，按需导入存储模块
-let SecureStore: typeof import('expo-secure-store') | null = null;
-// 判断是否为 App 端（非浏览器环境）
-const isAppEnv = typeof window === 'undefined';
-if (isAppEnv) {
-  // App 端：导入 expo-secure-store
-  SecureStore = require('expo-secure-store');
-}
+import { getAccessToken, setAccessToken } from '@/storage/auth-storage';
 
 // 认证状态类型
 type AuthState = {
@@ -47,15 +39,9 @@ export async function refreshAuthToken() {
   let token: string | null = null;
 
   try {
-    if (isAppEnv && SecureStore) {
-      // App 端：从 SecureStore 读取
-      token = await SecureStore.getItemAsync('access_token');
-    } else if (typeof window !== 'undefined') {
-      // 网页端：从 localStorage 读取
-      token = localStorage.getItem('access_token');
-    }
+    // 从统一存储读取
+    token = await getAccessToken();
   } catch (error) {
-    // 网页端可能在隐私模式下无法访问 localStorage
     console.error('Failed to read token from storage:', error);
     token = null;
   }
@@ -68,23 +54,8 @@ export async function refreshAuthToken() {
 // 适配双端：设置 Token（同步持久化存储）
 export async function setAuthToken(token: string | null) {
   try {
-    if (isAppEnv && SecureStore) {
-      // App 端：操作 SecureStore
-      if (token) {
-        await SecureStore.setItemAsync('access_token', token);
-      } else {
-        await SecureStore.deleteItemAsync('access_token');
-      }
-    } else if (typeof window !== 'undefined') {
-      // 网页端：操作 localStorage
-      if (token) {
-        localStorage.setItem('access_token', token);
-      } else {
-        localStorage.removeItem('access_token');
-      }
-    }
+    await setAccessToken(token);
   } catch (error) {
-    // 网页端可能在隐私模式下无法访问 localStorage
     console.error('Failed to save token to storage:', error);
     // 即使存储失败，仍然更新内存状态
   }

@@ -3,6 +3,8 @@ import * as TaskManager from 'expo-task-manager';
 import { Platform } from 'react-native';
 
 import { getApiBaseUrl } from '@/services/api';
+import { clearAuthStorage, getAccessToken } from '@/storage/auth-storage';
+import { setAuthToken } from '@/hooks/use-auth-token';
 import {
   getLastSince,
   getNextAllowedAt,
@@ -97,6 +99,30 @@ async function notifyCombined(summaries: string[], total: number) {
   });
 }
 
+async function notifyAuthExpired() {
+  const Notifications = await getNotificationsModule();
+  if (!Notifications) {
+    return;
+  }
+  if (!notificationHandlerReady) {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: false,
+        shouldSetBadge: false,
+      }),
+    });
+    notificationHandlerReady = true;
+  }
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: '登录已过期',
+      body: '长时间未使用已自动退出，请打开应用重新登录或刷新。',
+    },
+    trigger: null,
+  });
+}
+
 TaskManager.defineTask(TASK_NAME, async () => {
   if (Platform.OS !== 'android' || isExpoGo()) {
     return BackgroundFetch.BackgroundFetchResult.NoData;
@@ -123,7 +149,19 @@ TaskManager.defineTask(TASK_NAME, async () => {
   if (since) {
     headers['If-Modified-Since'] = new Date(since).toUTCString();
   }
+  const token = await getAccessToken();
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
   const resp = await fetch(`${getApiBaseUrl()}/articles/${params}`, { headers });
+
+  if (resp.status === 401) {
+    await notifyAuthExpired();
+    await clearAuthStorage();
+    await setAuthToken(null);
+    await setNextAllowedAt(buildNextAllowedAt(nowMs));
+    return BackgroundFetch.BackgroundFetchResult.Failed;
+  }
 
   if (resp.status === 304) {
     await setNextAllowedAt(buildNextAllowedAt(nowMs));

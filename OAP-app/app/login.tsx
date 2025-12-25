@@ -25,13 +25,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'; // 安全区域视图
 import { MaterialCommunityIcons } from '@expo/vector-icons'; // Expo图标库
 import { useRouter } from 'expo-router'; // 路由导航
-import * as SecureStore from 'expo-secure-store'; // 安全存储
 
 // 导入自定义组件和工具
 import { AmbientBackground } from '@/components/ambient-background'; // 背景效果组件
 import { colors } from '@/constants/palette'; // 颜色常量
 import { getApiBaseUrl } from '@/services/api'; // 获取API基础URL
 import { setAuthToken } from '@/hooks/use-auth-token'; // 设置认证令牌
+import { setRefreshToken, setUserProfileRaw } from '@/storage/auth-storage'; // 认证存储
 
 /**
  * 登录页面组件
@@ -97,11 +97,10 @@ export default function LoginScreen() {
       console.log('[Login] 登录成功，存储令牌');
 
       // 存储认证令牌和用户信息
-      await SecureStore.setItemAsync('access_token', data.access_token || '');
-      await SecureStore.setItemAsync('refresh_token', data.refresh_token || '');
-      await SecureStore.setItemAsync('user_profile', JSON.stringify(data.user || {}));
-      // 更新认证令牌状态
-      setAuthToken(data.access_token || null);
+      await setRefreshToken(data.refresh_token || null);
+      await setUserProfileRaw(JSON.stringify(data.user || {}));
+      // 更新认证令牌状态（含存储）
+      await setAuthToken(data.access_token || null);
 
       console.log('[Login] 跳转到主页面');
 

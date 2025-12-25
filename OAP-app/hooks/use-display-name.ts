@@ -1,9 +1,9 @@
 // 用户显示名称 Hook
-// 主要功能：从 SecureStore 读取用户资料并获取显示名称
+// 主要功能：从认证存储读取用户资料并获取显示名称
 // 支持自定义默认名称，优先使用 display_name，其次使用 username
 
 import { useEffect, useState } from 'react';
-import * as SecureStore from 'expo-secure-store';
+import { getUserProfileRaw } from '@/storage/auth-storage';
 
 // 用户显示名称 Hook
 export function useDisplayName(defaultName = '用户') {
@@ -13,8 +13,8 @@ export function useDisplayName(defaultName = '用户') {
   useEffect(() => {
     // 组件挂载标记，防止卸载后更新状态
     let mounted = true;
-    // 从 SecureStore 读取用户资料
-    SecureStore.getItemAsync('user_profile').then((value) => {
+    // 从认证存储读取用户资料
+    getUserProfileRaw().then((value) => {
       // 如果组件已卸载，不更新状态
       if (!mounted) {
         return;

@@ -1,9 +1,9 @@
 // 用户资料 Hook
-// 主要功能：从 SecureStore 读取用户资料信息
+// 主要功能：从认证存储读取用户资料信息
 // 包含显示名称、用户名、VIP 状态和 VIP 过期时间
 
 import { useEffect, useState } from 'react';
-import * as SecureStore from 'expo-secure-store';
+import { getUserProfileRaw } from '@/storage/auth-storage';
 
 // 用户资料类型
 type UserProfile = {
@@ -21,8 +21,8 @@ export function useUserProfile() {
   useEffect(() => {
     // 组件挂载标记，防止卸载后更新状态
     let mounted = true;
-    // 从 SecureStore 读取用户资料
-    SecureStore.getItemAsync('user_profile').then((value) => {
+    // 从认证存储读取用户资料
+    getUserProfileRaw().then((value) => {
       // 如果组件已卸载，不更新状态
       if (!mounted) {
         return;

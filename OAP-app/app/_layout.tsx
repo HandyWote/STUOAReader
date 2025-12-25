@@ -2,6 +2,7 @@
 // 主要功能：配置应用的全局布局、主题、路由守卫和通知任务
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native'; // 导航主题配置
 import { useEffect } from 'react';
+import { AppState } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router'; // 路由导航
 import { StatusBar } from 'expo-status-bar'; // 状态栏
 import 'react-native-reanimated'; // 动画库
@@ -9,6 +10,7 @@ import 'react-native-reanimated'; // 动画库
 import { useAuthTokenState } from '@/hooks/use-auth-token'; // 认证令牌状态
 import { useColorScheme } from '@/hooks/use-color-scheme'; // 颜色方案
 import { registerNotificationTaskIfEnabled } from '@/notifications/notification-task'; // 通知任务注册
+import { refreshSessionOnForeground } from '@/services/auth'; // 前台刷新
 
 // 根布局组件
 export default function RootLayout() {
@@ -20,6 +22,24 @@ export default function RootLayout() {
   // 初始化通知任务（仅在通知启用时注册，仅执行一次）
   useEffect(() => {
     registerNotificationTaskIfEnabled();
+  }, []);
+
+  useEffect(() => {
+    const refreshIfActive = () => {
+      void refreshSessionOnForeground();
+    };
+
+    refreshIfActive();
+
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        refreshIfActive();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
   }, []);
 
   // 核心路由守卫逻辑（权限拦截+自动跳转）

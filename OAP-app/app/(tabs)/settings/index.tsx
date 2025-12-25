@@ -5,7 +5,6 @@ import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-n
 import { LinearGradient } from 'expo-linear-gradient'; // 渐变背景组件
 import { useRouter } from 'expo-router'; // 路由导航
 import { BellRinging, CaretRight } from 'phosphor-react-native'; // 图标组件
-import * as SecureStore from 'expo-secure-store'; // 安全存储
 
 import { AmbientBackground } from '@/components/ambient-background'; // 背景效果组件
 import { BottomDock } from '@/components/bottom-dock'; // 底部导航组件
@@ -13,6 +12,7 @@ import { TopBar } from '@/components/top-bar'; // 顶部导航栏组件
 import { colors } from '@/constants/palette'; // 颜色常量
 import { useUserProfile } from '@/hooks/use-user-profile'; // 用户资料自定义Hook
 import { setAuthToken } from '@/hooks/use-auth-token'; // 设置认证令牌
+import { clearAuthStorage } from '@/storage/auth-storage'; // 认证存储
 import { disableNotifications } from '@/notifications/notification-task'; // 禁用通知
 import { setNotificationsEnabled } from '@/notifications/notification-storage'; // 设置通知启用状态
 import { formatDateLabel } from '@/utils/date'; // 日期格式化工具
@@ -49,9 +49,8 @@ export default function SettingsScreen() {
 
   // 处理退出登录的回调函数
   const handleLogout = useCallback(async () => {
-    await SecureStore.deleteItemAsync('access_token'); // 删除访问令牌
-    await SecureStore.deleteItemAsync('refresh_token'); // 删除刷新令牌
-    setAuthToken(null); // 设置认证令牌为null
+    await clearAuthStorage(); // 清理认证存储
+    await setAuthToken(null); // 设置认证令牌为null
     await setNotificationsEnabled(false); // 禁用通知
     await disableNotifications(); // 实际禁用通知任务
     router.replace('/login'); // 跳转到登录页面

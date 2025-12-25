@@ -16,7 +16,7 @@ class Config:
 
         # 默认值
         self.database_url: Optional[str] = None
-        self.auth_access_token_ttl: timedelta = timedelta(hours=1)
+        self.auth_access_token_ttl: timedelta = timedelta(days=7)
         self.auth_refresh_token_ttl: timedelta = timedelta(days=7)
         self.auth_jwt_secret: Optional[str] = None
         self.auth_password_cost: int = 12
