@@ -1,4 +1,4 @@
-const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:5000/api';
+const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://oap-backend.handywote.top/api';
 
 export function getApiBaseUrl() {
   return apiBaseUrl;
