@@ -1,22 +1,37 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useEffect } from 'react';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
+import { useAuthTokenState } from '@/hooks/use-auth-token';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { registerNotificationTaskIfEnabled } from '@/notifications/notification-task';
 
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
-
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const router = useRouter();
+  const segments = useSegments();
+  const { token, isLoading } = useAuthTokenState();
 
   useEffect(() => {
     registerNotificationTaskIfEnabled();
   }, []);
+
+  useEffect(() => {
+    if (isLoading || segments.length === 0) {
+      return;
+    }
+    const first = segments[0];
+    const inLogin = first === 'login';
+    if (!token && !inLogin) {
+      router.replace('/login');
+      return;
+    }
+    if (token && inLogin) {
+      router.replace('/(tabs)');
+    }
+  }, [isLoading, router, segments, token]);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>

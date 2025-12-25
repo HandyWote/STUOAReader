@@ -10,6 +10,7 @@ import { BottomDock } from '@/components/bottom-dock';
 import { TopBar } from '@/components/top-bar';
 import { colors } from '@/constants/palette';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { setAuthToken } from '@/hooks/use-auth-token';
 import { disableNotifications } from '@/notifications/notification-task';
 import { setNotificationsEnabled } from '@/notifications/notification-storage';
 import { formatDateLabel } from '@/utils/date';
@@ -39,6 +40,7 @@ export default function SettingsScreen() {
   const handleLogout = useCallback(async () => {
     await SecureStore.deleteItemAsync('access_token');
     await SecureStore.deleteItemAsync('refresh_token');
+    setAuthToken(null);
     await setNotificationsEnabled(false);
     await disableNotifications();
     router.replace('/login');

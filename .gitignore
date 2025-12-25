@@ -8,7 +8,6 @@ user.db
 想法.txt
 .venv
 env
-AGENTS.md
 __pycache__
 api/__pycache__/
 events
@@ -24,3 +23,4 @@ example
 CLAUDE.md
 .claude
 .vscode/
+node_modules/

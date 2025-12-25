@@ -18,6 +18,7 @@ import * as SecureStore from 'expo-secure-store';
 import { AmbientBackground } from '@/components/ambient-background';
 import { colors } from '@/constants/palette';
 import { getApiBaseUrl } from '@/services/api';
+import { setAuthToken } from '@/hooks/use-auth-token';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -51,6 +52,7 @@ export default function LoginScreen() {
       await SecureStore.setItemAsync('access_token', data.access_token || '');
       await SecureStore.setItemAsync('refresh_token', data.refresh_token || '');
       await SecureStore.setItemAsync('user_profile', JSON.stringify(data.user || {}));
+      setAuthToken(data.access_token || null);
 
       router.replace('/(tabs)');
     } catch (err) {
