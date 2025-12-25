@@ -3,13 +3,15 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import type { ChatMessage } from '@/hooks/use-ai-chat';
 import { colors } from '@/constants/palette';
+import { ThinkingIndicator } from '@/components/thinking-indicator';
 
 type ChatMessageProps = {
   message: ChatMessage;
   renderMarkdown: (content: string) => React.ReactNode;
+  isThinking?: boolean;
 };
 
-export function ChatMessageItem({ message, renderMarkdown }: ChatMessageProps) {
+export function ChatMessageItem({ message, renderMarkdown, isThinking }: ChatMessageProps) {
   return (
     <View
       style={[
@@ -28,6 +30,8 @@ export function ChatMessageItem({ message, renderMarkdown }: ChatMessageProps) {
         {message.isUser && <View style={styles.userLine} />}
         {message.isUser ? (
           <Text style={styles.messageText}>{message.text}</Text>
+        ) : isThinking ? (
+          <ThinkingIndicator />
         ) : (
           renderMarkdown(message.text || ' ')
         )}

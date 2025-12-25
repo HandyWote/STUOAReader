@@ -64,6 +64,14 @@ export default function AiAssistantScreen() {
   const insets = useSafeAreaInsets();
 
   const greeting = useMemo(() => `${getDayPeriod(new Date())}，${displayName}`, [displayName]);
+  const lastAiMessageId = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+      if (!messages[i].isUser) {
+        return messages[i].id;
+      }
+    }
+    return null;
+  }, [messages]);
   const dockHeight = 68;
   const dockSpacing = 24;
   const inputHeight = 64;
@@ -176,6 +184,7 @@ export default function AiAssistantScreen() {
           showsVerticalScrollIndicator={false}
           onContentSizeChange={scrollToEnd}
         >
+          
           {messages.length === 0 ? (
             <View style={styles.emptyState}>
               <View style={styles.emptyIconWrap}>
@@ -192,10 +201,13 @@ export default function AiAssistantScreen() {
           ) : (
             messages.map((msg) => (
               <View key={msg.id} style={styles.messageBlock}>
+                
                 <ChatMessageItem
                   message={msg}
                   renderMarkdown={renderMarkdownWithMermaid}
+                  isThinking={!!lastAiMessageId && isThinking && msg.id === lastAiMessageId}
                 />
+                
                 {!msg.isUser && msg.related && msg.related.length > 0 && (
                   <SourceList
                     related={msg.related}
@@ -209,9 +221,7 @@ export default function AiAssistantScreen() {
             ))
           )}
 
-          {isThinking && (
-            <ThinkingIndicator />
-          )}
+          
         </ScrollView>
 
         <View style={{ paddingBottom: dockOffset }}>
