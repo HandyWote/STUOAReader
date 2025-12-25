@@ -7,7 +7,6 @@ import {
   getCachedArticleDetail,
   getCachedArticlesByDate,
   getTodayDateString,
-  pruneArticleCache,
   setCachedArticleDetail,
   setCachedArticlesByDate,
 } from '@/storage/article-storage';
@@ -54,7 +53,6 @@ export function useArticles(token?: string | null) {
   const loadArticles = useCallback(async () => {
     setIsLoading(true);
     try {
-      await pruneArticleCache();
       const dateStr = getTodayDateString();
       const cached = await getCachedArticlesByDate(dateStr);
       if (cached) {
@@ -75,7 +73,6 @@ export function useArticles(token?: string | null) {
   const refreshArticles = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      await pruneArticleCache();
       const dateStr = getTodayDateString();
       const cached = await getCachedArticlesByDate(dateStr);
       if (cached) {

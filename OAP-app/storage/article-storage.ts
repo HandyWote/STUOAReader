@@ -4,8 +4,6 @@ import type { Article, ArticleDetail } from '@/types/article';
 
 const DAY_KEY_PREFIX = 'articles.day.';
 const DETAIL_KEY_PREFIX = 'articles.detail.';
-const CACHE_DAYS = 3;
-
 type CachedDay = {
   date: string;
   cached_at: number;
@@ -17,22 +15,6 @@ type CachedDetail = {
   published_on?: string;
   detail: ArticleDetail;
 };
-
-function toDateValue(dateStr: string) {
-  const parsed = new Date(dateStr);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
-function isRecentDate(dateStr: string, days: number) {
-  const value = toDateValue(dateStr);
-  if (!value) {
-    return false;
-  }
-  const cutoff = new Date();
-  cutoff.setHours(0, 0, 0, 0);
-  cutoff.setDate(cutoff.getDate() - (days - 1));
-  return value >= cutoff;
-}
 
 export function getTodayDateString() {
   return new Date().toISOString().slice(0, 10);
@@ -46,7 +28,7 @@ function detailKey(id: number) {
   return `${DETAIL_KEY_PREFIX}${id}`;
 }
 
-export async function pruneArticleCache(days: number = CACHE_DAYS) {
+export async function pruneArticleCache() {
   const keys = await AsyncStorage.getAllKeys();
   const dayKeys = keys.filter((key) => key.startsWith(DAY_KEY_PREFIX));
   const detailKeys = keys.filter((key) => key.startsWith(DETAIL_KEY_PREFIX));
@@ -55,7 +37,8 @@ export async function pruneArticleCache(days: number = CACHE_DAYS) {
 
   dayKeys.forEach((key) => {
     const dateStr = key.slice(DAY_KEY_PREFIX.length);
-    if (!isRecentDate(dateStr, days)) {
+    const parsed = new Date(dateStr);
+    if (Number.isNaN(parsed.getTime())) {
       toRemove.push(key);
     }
   });
@@ -68,20 +51,9 @@ export async function pruneArticleCache(days: number = CACHE_DAYS) {
       }
       try {
         const parsed = JSON.parse(raw) as CachedDetail;
-        const publishedOn = parsed.published_on || parsed.detail?.published_on;
-        if (publishedOn && !isRecentDate(publishedOn, days)) {
+        const cachedAt = new Date(parsed.cached_at);
+        if (Number.isNaN(cachedAt.getTime())) {
           toRemove.push(key);
-          return;
-        }
-        if (!publishedOn) {
-          const cachedAt = new Date(parsed.cached_at);
-          if (Number.isNaN(cachedAt.getTime())) {
-            toRemove.push(key);
-            return;
-          }
-          if (!isRecentDate(cachedAt.toISOString().slice(0, 10), days)) {
-            toRemove.push(key);
-          }
         }
       } catch {
         toRemove.push(key);
@@ -94,7 +66,7 @@ export async function pruneArticleCache(days: number = CACHE_DAYS) {
   }
 }
 
-export async function getCachedArticlesByDate(dateStr: string, days: number = CACHE_DAYS) {
+export async function getCachedArticlesByDate(dateStr: string) {
   const key = dayKey(dateStr);
   const raw = await AsyncStorage.getItem(key);
   if (!raw) {
@@ -102,10 +74,6 @@ export async function getCachedArticlesByDate(dateStr: string, days: number = CA
   }
   try {
     const parsed = JSON.parse(raw) as CachedDay;
-    if (!isRecentDate(parsed.date, days)) {
-      await AsyncStorage.removeItem(key);
-      return null;
-    }
     return parsed.articles;
   } catch {
     await AsyncStorage.removeItem(key);
@@ -113,21 +81,16 @@ export async function getCachedArticlesByDate(dateStr: string, days: number = CA
   }
 }
 
-export async function setCachedArticlesByDate(
-  dateStr: string,
-  articles: Article[],
-  days: number = CACHE_DAYS
-) {
+export async function setCachedArticlesByDate(dateStr: string, articles: Article[]) {
   const payload: CachedDay = {
     date: dateStr,
     cached_at: Date.now(),
     articles,
   };
   await AsyncStorage.setItem(dayKey(dateStr), JSON.stringify(payload));
-  await pruneArticleCache(days);
 }
 
-export async function getCachedArticleDetail(id: number, days: number = CACHE_DAYS) {
+export async function getCachedArticleDetail(id: number) {
   const key = detailKey(id);
   const raw = await AsyncStorage.getItem(key);
   if (!raw) {
@@ -135,22 +98,6 @@ export async function getCachedArticleDetail(id: number, days: number = CACHE_DA
   }
   try {
     const parsed = JSON.parse(raw) as CachedDetail;
-    const publishedOn = parsed.published_on || parsed.detail?.published_on;
-    if (publishedOn && !isRecentDate(publishedOn, days)) {
-      await AsyncStorage.removeItem(key);
-      return null;
-    }
-    if (!publishedOn) {
-      const cachedAt = new Date(parsed.cached_at);
-      if (Number.isNaN(cachedAt.getTime())) {
-        await AsyncStorage.removeItem(key);
-        return null;
-      }
-      if (!isRecentDate(cachedAt.toISOString().slice(0, 10), days)) {
-        await AsyncStorage.removeItem(key);
-        return null;
-      }
-    }
     return parsed.detail;
   } catch {
     await AsyncStorage.removeItem(key);
@@ -158,10 +105,7 @@ export async function getCachedArticleDetail(id: number, days: number = CACHE_DA
   }
 }
 
-export async function setCachedArticleDetail(
-  detail: ArticleDetail,
-  days: number = CACHE_DAYS
-) {
+export async function setCachedArticleDetail(detail: ArticleDetail) {
   if (!detail?.id) {
     return;
   }
@@ -171,5 +115,4 @@ export async function setCachedArticleDetail(
     detail,
   };
   await AsyncStorage.setItem(detailKey(detail.id), JSON.stringify(payload));
-  await pruneArticleCache(days);
 }
