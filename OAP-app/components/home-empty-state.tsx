@@ -1,5 +1,3 @@
-// 首页空状态组件
-// 主要功能：当首页没有新通知时显示空状态提示，包含皇冠图标和提示文字
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Crown } from 'phosphor-react-native';
@@ -17,19 +15,16 @@ export function HomeEmptyState() {
 }
 
 const styles = StyleSheet.create({
-  // 空状态容器样式：居中排列，上方边距100
   emptyState: {
     marginTop: 100,
     alignItems: 'center',
     gap: 8,
   },
-  // 空状态标题样式
   emptyTitle: {
     fontSize: 16,
     fontWeight: '700',
     color: colors.stone800,
   },
-  // 空状态副标题样式
   emptySub: {
     fontSize: 12,
     color: colors.stone400,
