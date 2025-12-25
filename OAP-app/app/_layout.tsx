@@ -28,6 +28,7 @@ export default function RootLayout() {
 
     const first = segments[0]; // 获取第一个路由分段
     const inLogin = first === 'login'; // 判断是否在登录页
+    const inTabs = first === '(tabs)'; // 判断是否在标签页
 
     // 未登录且不在登录页 → 强制跳转到登录页
     if (!token && !inLogin) {

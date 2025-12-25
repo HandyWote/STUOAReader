@@ -46,12 +46,18 @@ export function getAuthSnapshot() {
 export async function refreshAuthToken() {
   let token: string | null = null;
 
-  if (isAppEnv && SecureStore) {
-    // App 端：从 SecureStore 读取
-    token = await SecureStore.getItemAsync('access_token');
-  } else if (typeof window !== 'undefined') {
-    // 网页端：从 localStorage 读取
-    token = localStorage.getItem('access_token');
+  try {
+    if (isAppEnv && SecureStore) {
+      // App 端：从 SecureStore 读取
+      token = await SecureStore.getItemAsync('access_token');
+    } else if (typeof window !== 'undefined') {
+      // 网页端：从 localStorage 读取
+      token = localStorage.getItem('access_token');
+    }
+  } catch (error) {
+    // 网页端可能在隐私模式下无法访问 localStorage
+    console.error('Failed to read token from storage:', error);
+    token = null;
   }
 
   // 更新内存状态并通知监听者
@@ -61,20 +67,26 @@ export async function refreshAuthToken() {
 
 // 适配双端：设置 Token（同步持久化存储）
 export async function setAuthToken(token: string | null) {
-  if (isAppEnv && SecureStore) {
-    // App 端：操作 SecureStore
-    if (token) {
-      await SecureStore.setItemAsync('access_token', token);
-    } else {
-      await SecureStore.deleteItemAsync('access_token');
+  try {
+    if (isAppEnv && SecureStore) {
+      // App 端：操作 SecureStore
+      if (token) {
+        await SecureStore.setItemAsync('access_token', token);
+      } else {
+        await SecureStore.deleteItemAsync('access_token');
+      }
+    } else if (typeof window !== 'undefined') {
+      // 网页端：操作 localStorage
+      if (token) {
+        localStorage.setItem('access_token', token);
+      } else {
+        localStorage.removeItem('access_token');
+      }
     }
-  } else if (typeof window !== 'undefined') {
-    // 网页端：操作 localStorage
-    if (token) {
-      localStorage.setItem('access_token', token);
-    } else {
-      localStorage.removeItem('access_token');
-    }
+  } catch (error) {
+    // 网页端可能在隐私模式下无法访问 localStorage
+    console.error('Failed to save token to storage:', error);
+    // 即使存储失败，仍然更新内存状态
   }
 
   // 更新内存状态并通知监听者

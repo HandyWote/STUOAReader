@@ -69,6 +69,11 @@ export default function LoginScreen() {
     // 清空错误信息并设置提交状态
     setError('');
     setIsSubmitting(true);
+
+    console.log('[Login] 开始登录流程');
+    console.log('[Login] API URL:', `${apiBaseUrl}/auth/token`);
+    console.log('[Login] 用户名:', username.trim());
+
     try {
       // 发送登录请求
       const resp = await fetch(`${apiBaseUrl}/auth/token`, {
@@ -76,13 +81,20 @@ export default function LoginScreen() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: username.trim(), password }),
       });
+
+      console.log('[Login] 响应状态码:', resp.status);
+
       // 解析响应数据
       const data = await resp.json();
+      console.log('[Login] 响应数据:', data);
+
       // 处理错误响应
       if (!resp.ok) {
         setError(data?.error || '登录失败，请检查账号或密码');
         return;
       }
+
+      console.log('[Login] 登录成功，存储令牌');
 
       // 存储认证令牌和用户信息
       await SecureStore.setItemAsync('access_token', data.access_token || '');
@@ -91,10 +103,13 @@ export default function LoginScreen() {
       // 更新认证令牌状态
       setAuthToken(data.access_token || null);
 
+      console.log('[Login] 跳转到主页面');
+
       // 登录成功，跳转到主页面
       router.replace('/(tabs)');
     } catch (err) {
       // 处理网络异常
+      console.error('[Login] 登录异常:', err);
       setError('网络异常，请稍后重试');
     } finally {
       // 无论成功失败，都结束提交状态
