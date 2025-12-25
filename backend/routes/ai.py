@@ -38,6 +38,16 @@ MEMORY_TTL_SECONDS = 24 * 60 * 60
 MEMORY_MAX_ITEMS = 5
 
 
+def _normalize_ai_base_url(raw_url: str | None) -> str | None:
+    if not raw_url:
+        return None
+    url = raw_url.rstrip("/")
+    for suffix in ("/chat/completions", "/v1/chat/completions"):
+        if url.endswith(suffix):
+            return url[: -len(suffix)]
+    return url
+
+
 def generate_embedding(text: str) -> list[float] | None:
     """生成文本的向量嵌入。
     
@@ -104,7 +114,7 @@ def search_similar_articles(query_embedding: list[float], top_k: int = 3) -> lis
             LIMIT %s
         )
         SELECT id, title, unit, published_on, summary, content, similarity,
-               similarity - %s * exp(-GREATEST(date_part('day', CURRENT_DATE - published_on), 0) / %s) AS score
+               similarity - %s * exp(-GREATEST(CURRENT_DATE - published_on, 0)::float / %s) AS score
         FROM candidate
         ORDER BY score ASC
         LIMIT %s
@@ -231,7 +241,7 @@ def _build_agent() -> Any:
     tools = [vector_search_tool]
     llm = ChatOpenAI(
         api_key=config.api_key,
-        base_url=config.ai_base_url,
+        base_url=_normalize_ai_base_url(config.ai_base_url),
         model=config.ai_model,
         temperature=0.2,
     )
