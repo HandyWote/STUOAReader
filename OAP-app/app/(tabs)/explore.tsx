@@ -3,6 +3,7 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,7 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Markdown from 'react-native-markdown-display';
 import { WebView } from 'react-native-webview';
-import { Crown } from 'phosphor-react-native';
+import { ChatCircleDots, Crown } from 'phosphor-react-native';
 
 import { AmbientBackground } from '@/components/ambient-background';
 import { ArticleDetailSheet } from '@/components/article-detail-sheet';
@@ -60,7 +61,7 @@ export default function AiAssistantScreen() {
   const token = useAuthToken();
   const displayName = useDisplayName('用户');
   const mermaidScript = useMermaidScript();
-  const { messages, isThinking, sendChat } = useAiChat(token);
+  const { messages, isThinking, sendChat, clearChat } = useAiChat(token);
   const insets = useSafeAreaInsets();
 
   const greeting = useMemo(() => `${getDayPeriod(new Date())}，${displayName}`, [displayName]);
@@ -118,6 +119,13 @@ export default function AiAssistantScreen() {
     void sendChat(question).finally(scrollToEnd);
   }, [input, isThinking, scrollToEnd, sendChat]);
 
+  const handleNewChat = useCallback(async () => {
+    setInput('');
+    setExpandedSources({});
+    closeArticle();
+    await clearChat();
+  }, [clearChat, closeArticle]);
+
   const renderMarkdownWithMermaid = useCallback((content: string) => {
     const segments: Array<{ type: 'markdown' | 'mermaid'; content: string }> = [];
     const regex = /```mermaid\s*([\s\S]*?)```/g;
@@ -169,6 +177,11 @@ export default function AiAssistantScreen() {
         variant="explore"
         title="智能助理"
         dateText={formatDateLabel()}
+        actions={(
+          <Pressable style={styles.actionButton} onPress={handleNewChat}>
+            <ChatCircleDots size={18} color={colors.stone400} weight="fill" />
+          </Pressable>
+        )}
       />
 
       <KeyboardAvoidingView
@@ -355,5 +368,29 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 240,
     backgroundColor: 'transparent',
+  },
+  actionButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.gold100,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOpacity: 0.06,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 6 },
+      },
+      android: {
+        elevation: 3,
+      },
+      web: {
+        boxShadow: '0px 6px 10px rgba(0, 0, 0, 0.06)',
+      },
+    }),
   },
 });

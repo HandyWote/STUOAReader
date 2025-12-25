@@ -14,6 +14,7 @@ type TopBarProps = {
   isScrolled?: boolean;
   hasUnread?: boolean;
   onPressAction?: () => void;
+  actions?: React.ReactNode;
 };
 
 export function TopBar({
@@ -23,6 +24,7 @@ export function TopBar({
   isScrolled = false,
   hasUnread = false,
   onPressAction,
+  actions,
 }: TopBarProps) {
   if (variant === 'home') {
     return (
@@ -36,10 +38,14 @@ export function TopBar({
               </View>
               <Text style={styles.homeTitle}>{title}</Text>
             </View>
-            <Pressable style={styles.bellButton} onPress={onPressAction}>
-              <Bell size={18} color={colors.stone400} weight="fill" />
-              {hasUnread && <View style={styles.bellDot} />}
-            </Pressable>
+            {actions ? (
+              <View style={styles.actionRow}>{actions}</View>
+            ) : (
+              <Pressable style={styles.bellButton} onPress={onPressAction}>
+                <Bell size={18} color={colors.stone400} weight="fill" />
+                {hasUnread && <View style={styles.bellDot} />}
+              </Pressable>
+            )}
           </View>
         </BlurView>
       </View>
@@ -57,11 +63,15 @@ export function TopBar({
             </View>
             <Text style={styles.exploreTitle}>{title}</Text>
           </View>
-          {onPressAction && (
-            <Pressable style={styles.bellButton} onPress={onPressAction}>
-              <Bell size={18} color={colors.stone400} weight="fill" />
-              {hasUnread && <View style={styles.bellDot} />}
-            </Pressable>
+          {actions ? (
+            <View style={styles.actionRow}>{actions}</View>
+          ) : (
+            onPressAction && (
+              <Pressable style={styles.bellButton} onPress={onPressAction}>
+                <Bell size={18} color={colors.stone400} weight="fill" />
+                {hasUnread && <View style={styles.bellDot} />}
+              </Pressable>
+            )
           )}
         </View>
       </BlurView>
@@ -175,6 +185,11 @@ const styles = StyleSheet.create({
         boxShadow: '0px 6px 10px rgba(0, 0, 0, 0.06)',
       },
     }),
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   bellDot: {
     position: 'absolute',

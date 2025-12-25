@@ -11,6 +11,7 @@ import { colors } from '@/constants/palette';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { setAuthToken } from '@/hooks/use-auth-token';
 import { clearAuthStorage } from '@/storage/auth-storage';
+import { clearChatHistory } from '@/storage/chat-storage';
 import { disableNotifications } from '@/notifications/notification-task';
 import { setNotificationsEnabled } from '@/notifications/notification-storage';
 import { formatDateLabel } from '@/utils/date';
@@ -39,6 +40,7 @@ export default function SettingsScreen() {
 
   const handleLogout = useCallback(async () => {
     await clearAuthStorage();
+    await clearChatHistory();
     await setAuthToken(null);
     await setNotificationsEnabled(false);
     await disableNotifications();

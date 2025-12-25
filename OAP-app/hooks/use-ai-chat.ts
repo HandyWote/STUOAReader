@@ -1,21 +1,39 @@
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import type { RelatedArticle } from '@/types/article';
 import { askAi } from '@/services/ai';
+import { clearChatHistory, getChatHistory, setChatHistory } from '@/storage/chat-storage';
+import type { ChatMessage } from '@/types/chat';
 import { extractKeywords } from '@/utils/text';
-
-export type ChatMessage = {
-  id: string;
-  isUser: boolean;
-  text: string;
-  highlights?: string[];
-  related?: RelatedArticle[];
-};
 
 export function useAiChat(token?: string | null) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isThinking, setIsThinking] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    getChatHistory().then((history) => {
+      if (!mounted) {
+        return;
+      }
+      if (history && history.length > 0) {
+        setMessages(history);
+      }
+      setIsHydrated(true);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isHydrated) {
+      return;
+    }
+    void setChatHistory(messages);
+  }, [isHydrated, messages]);
 
   const setMessageText = useCallback((id: string, text: string) => {
     setMessages((prev) => prev.map((item) => (item.id === id ? { ...item, text } : item)));
@@ -65,10 +83,17 @@ export function useAiChat(token?: string | null) {
     [isThinking, setMessageText, token, updateRelated]
   );
 
+  const clearChat = useCallback(async () => {
+    setMessages([]);
+    setIsThinking(false);
+    await clearChatHistory();
+  }, []);
+
   return {
     messages,
     isThinking,
     sendChat,
     setMessages,
+    clearChat,
   };
 }
