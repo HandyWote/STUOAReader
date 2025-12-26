@@ -10,6 +10,7 @@ from datetime import date, datetime
 from typing import Any, Iterable, TypedDict, Annotated
 import json
 from functools import lru_cache
+from datetime import datetime
 
 from flask import Blueprint, jsonify, request
 import requests
@@ -216,7 +217,6 @@ def _build_memory_messages(history: list[dict[str, str]]) -> list[BaseMessage]:
 
 
 def _build_system_prompt(top_k_hint: int, display_name: str | None = None) -> str:
-    from datetime import datetime
     time_now = datetime.now()
     identity_hint = f"当前用户的名字：{display_name}。可酌情称呼，但不强制。\n" if display_name else "\n"
     return (
