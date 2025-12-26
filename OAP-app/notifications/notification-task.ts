@@ -14,6 +14,7 @@ import {
   setNextAllowedAt,
 } from '@/notifications/notification-storage';
 import { isExpoGo } from '@/notifications/notification-env';
+import { appendNotificationLog } from '@/notifications/notification-log';
 
 const TASK_NAME = 'oap-articles-background-fetch';
 const CHANNEL_ID = 'oa-updates';
@@ -124,94 +125,119 @@ async function notifyAuthExpired() {
 }
 
 TaskManager.defineTask(TASK_NAME, async () => {
+  const startedAt = new Date().toISOString();
+  const record = async (status: string, detail?: string, count?: number) => {
+    try {
+      await appendNotificationLog({ at: startedAt, status, detail, count });
+    } catch {
+      return;
+    }
+  };
+
   if (Platform.OS !== 'android' || isExpoGo()) {
+    await record('unsupported', '非 Android 或 Expo Go');
     return BackgroundFetch.BackgroundFetchResult.NoData;
   }
   const enabled = await getNotificationsEnabled();
   if (!enabled) {
+    await record('disabled', '通知未开启');
     return BackgroundFetch.BackgroundFetchResult.NoData;
   }
 
   const now = new Date();
   if (!isWithinWindow(now)) {
+    await record('out_of_window', '不在通知时间窗');
     return BackgroundFetch.BackgroundFetchResult.NoData;
   }
 
   const nowMs = now.getTime();
   const nextAllowedAt = await getNextAllowedAt();
   if (nextAllowedAt && nowMs < nextAllowedAt) {
+    await record('rate_limited', '未到下次允许轮询时间');
     return BackgroundFetch.BackgroundFetchResult.NoData;
   }
 
-  const since = await getLastSince();
-  const params = since ? `?since=${since}` : '';
-  const headers: Record<string, string> = {};
-  if (since) {
-    headers['If-Modified-Since'] = new Date(since).toUTCString();
-  }
-  const token = await getAccessToken();
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-  const resp = await fetch(`${getApiBaseUrl()}/articles/${params}`, { headers });
-
-  if (resp.status === 401) {
-    await notifyAuthExpired();
-    await clearAuthStorage();
-    await setAuthToken(null);
-    await setNextAllowedAt(buildNextAllowedAt(nowMs));
-    return BackgroundFetch.BackgroundFetchResult.Failed;
-  }
-
-  if (resp.status === 304) {
-    await setNextAllowedAt(buildNextAllowedAt(nowMs));
-    return BackgroundFetch.BackgroundFetchResult.NoData;
-  }
-
-  if (!resp.ok) {
-    await setNextAllowedAt(buildNextAllowedAt(nowMs));
-    return BackgroundFetch.BackgroundFetchResult.Failed;
-  }
-
-  const data = await resp.json();
-  const articles = Array.isArray(data?.articles) ? data.articles : [];
-  if (articles.length === 0) {
-    await setNextAllowedAt(buildNextAllowedAt(nowMs));
-    return BackgroundFetch.BackgroundFetchResult.NoData;
-  }
-
-  const parsed = articles
-    .map((article: { created_at?: string; summary?: string }) => {
-      const createdAt = article.created_at ? new Date(article.created_at).getTime() : 0;
-      return {
-        createdAt,
-        summary: article.summary || '暂无摘要',
-      };
-    })
-    .filter((item: { createdAt: number }) => item.createdAt > 0)
-    .sort((a: { createdAt: number }, b: { createdAt: number }) => b.createdAt - a.createdAt);
-
-  const newItems = since ? parsed.filter((item) => item.createdAt > since) : parsed;
-  if (newItems.length === 0) {
-    await setNextAllowedAt(buildNextAllowedAt(nowMs));
-    return BackgroundFetch.BackgroundFetchResult.NoData;
-  }
-
-  await ensureAndroidChannel();
-
-  if (newItems.length <= 2) {
-    for (const item of newItems) {
-      await notifySingle(item.summary);
+  try {
+    const since = await getLastSince();
+    const params = since ? `?since=${since}` : '';
+    const headers: Record<string, string> = {};
+    if (since) {
+      headers['If-Modified-Since'] = new Date(since).toUTCString();
     }
-  } else {
-    const summaries = newItems.slice(0, 3).map((item) => item.summary);
-    await notifyCombined(summaries, newItems.length);
-  }
+    const token = await getAccessToken();
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+    const resp = await fetch(`${getApiBaseUrl()}/articles/${params}`, { headers });
 
-  const maxCreatedAt = Math.max(...newItems.map((item) => item.createdAt));
-  await setLastSince(maxCreatedAt);
-  await setNextAllowedAt(buildNextAllowedAt(nowMs));
-  return BackgroundFetch.BackgroundFetchResult.NewData;
+    if (resp.status === 401) {
+      await notifyAuthExpired();
+      await clearAuthStorage();
+      await setAuthToken(null);
+      await setNextAllowedAt(buildNextAllowedAt(nowMs));
+      await record('auth_expired', '401 未授权');
+      return BackgroundFetch.BackgroundFetchResult.Failed;
+    }
+
+    if (resp.status === 304) {
+      await setNextAllowedAt(buildNextAllowedAt(nowMs));
+      await record('not_modified', '304 无变化');
+      return BackgroundFetch.BackgroundFetchResult.NoData;
+    }
+
+    if (!resp.ok) {
+      await setNextAllowedAt(buildNextAllowedAt(nowMs));
+      await record('http_error', `HTTP ${resp.status}`);
+      return BackgroundFetch.BackgroundFetchResult.Failed;
+    }
+
+    const data = await resp.json();
+    const articles = Array.isArray(data?.articles) ? data.articles : [];
+    if (articles.length === 0) {
+      await setNextAllowedAt(buildNextAllowedAt(nowMs));
+      await record('no_articles', '返回空列表');
+      return BackgroundFetch.BackgroundFetchResult.NoData;
+    }
+
+    const parsed = articles
+      .map((article: { created_at?: string; summary?: string }) => {
+        const createdAt = article.created_at ? new Date(article.created_at).getTime() : 0;
+        return {
+          createdAt,
+          summary: article.summary || '暂无摘要',
+        };
+      })
+      .filter((item: { createdAt: number }) => item.createdAt > 0)
+      .sort((a: { createdAt: number }, b: { createdAt: number }) => b.createdAt - a.createdAt);
+
+    const newItems = since ? parsed.filter((item) => item.createdAt > since) : parsed;
+    if (newItems.length === 0) {
+      await setNextAllowedAt(buildNextAllowedAt(nowMs));
+      await record('no_new_items', '无新增文章');
+      return BackgroundFetch.BackgroundFetchResult.NoData;
+    }
+
+    await ensureAndroidChannel();
+
+    if (newItems.length <= 2) {
+      for (const item of newItems) {
+        await notifySingle(item.summary);
+      }
+    } else {
+      const summaries = newItems.slice(0, 3).map((item) => item.summary);
+      await notifyCombined(summaries, newItems.length);
+    }
+
+    const maxCreatedAt = Math.max(...newItems.map((item) => item.createdAt));
+    await setLastSince(maxCreatedAt);
+    await setNextAllowedAt(buildNextAllowedAt(nowMs));
+    await record('new_articles', `新增 ${newItems.length} 条`, newItems.length);
+    return BackgroundFetch.BackgroundFetchResult.NewData;
+  } catch (error) {
+    await setNextAllowedAt(buildNextAllowedAt(nowMs));
+    await record('exception', error instanceof Error ? error.message : '未知异常');
+    return BackgroundFetch.BackgroundFetchResult.Failed;
+  }
 });
 
 export async function registerNotificationTask() {
@@ -254,4 +280,24 @@ export async function registerNotificationTaskIfEnabled() {
   if (enabled) {
     await registerNotificationTask();
   }
+}
+
+export async function triggerTestNotification() {
+  const now = new Date().toISOString();
+  if (Platform.OS !== 'android' || isExpoGo()) {
+    try {
+      await appendNotificationLog({ at: now, status: 'manual_test_blocked', detail: '非 Android 或 Expo Go' });
+    } catch {
+      return { ok: false, reason: 'unsupported' };
+    }
+    return { ok: false, reason: 'unsupported' };
+  }
+  await ensureAndroidChannel();
+  await notifySingle('这是一条模拟的通知，用于测试系统弹窗。');
+  try {
+    await appendNotificationLog({ at: now, status: 'manual_test', detail: '已触发模拟通知' });
+  } catch {
+    return { ok: true };
+  }
+  return { ok: true };
 }

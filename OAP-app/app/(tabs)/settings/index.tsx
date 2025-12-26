@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { BellRinging, CaretRight } from 'phosphor-react-native';
+import { BellRinging, CaretRight, Code } from 'phosphor-react-native';
 
 import { AmbientBackground } from '@/components/ambient-background';
 import { BottomDock } from '@/components/bottom-dock';
@@ -24,6 +24,7 @@ export default function SettingsScreen() {
 
   const displayName = profile?.display_name || profile?.username || '用户';
   const initials = displayName.trim().charAt(0) || '?';
+  const isAdmin = displayName.trim().toLowerCase() === 'admin';
   const vipExpiredAt = profile?.vip_expired_at ? new Date(profile.vip_expired_at) : null;
   const vipExpiredAtValid = vipExpiredAt ? !Number.isNaN(vipExpiredAt.getTime()) : false;
   const now = new Date();
@@ -90,6 +91,23 @@ export default function SettingsScreen() {
             <CaretRight size={16} color={colors.stone300} weight="bold" />
           </Pressable>
         </View>
+
+        {isAdmin && (
+          <View style={styles.card}>
+            <Pressable
+              onPress={() => router.push('/(tabs)/settings/developer')}
+              style={({ pressed }) => [styles.cardRow, pressed && styles.cardRowPressed]}
+            >
+              <View style={styles.cardRowLeft}>
+                <View style={styles.cardIcon}>
+                  <Code size={16} color={colors.stone600} weight="fill" />
+                </View>
+                <Text style={styles.cardRowText}>开发者模式</Text>
+              </View>
+              <CaretRight size={16} color={colors.stone300} weight="bold" />
+            </Pressable>
+          </View>
+        )}
 
         <Pressable
           style={({ pressed }) => [styles.logoutButton, pressed && styles.logoutPressed]}
