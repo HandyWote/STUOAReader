@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   card: {
-    backgroundColor: 'rgba(255,255,255,0.6)',
+    backgroundColor: 'rgba(255,255,255,0.8)',
     borderRadius: 32,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.8)',
@@ -121,7 +121,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
     borderRadius: 24,
   },
   cardRowLeft: {

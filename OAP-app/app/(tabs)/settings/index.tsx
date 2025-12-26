@@ -25,9 +25,11 @@ export default function SettingsScreen() {
   const initials = displayName.trim().charAt(0) || '?';
   const vipExpiredAt = profile?.vip_expired_at ? new Date(profile.vip_expired_at) : null;
   const vipExpiredAtValid = vipExpiredAt ? !Number.isNaN(vipExpiredAt.getTime()) : false;
-  const isVipActive = 
-    !!profile?.is_vip && (!vipExpiredAt || !vipExpiredAtValid || vipExpiredAt > new Date());
-  const isVipExpired = !!profile?.is_vip && vipExpiredAtValid && vipExpiredAt <= new Date();
+  const now = new Date();
+  const isVipActive =
+    !!profile?.is_vip && (!vipExpiredAtValid || (vipExpiredAt ? vipExpiredAt > now : true));
+  const isVipExpired =
+    !!profile?.is_vip && vipExpiredAtValid && vipExpiredAt ? vipExpiredAt <= now : false;
 
   const vipTag = useMemo(() => {
     if (isVipActive) {
@@ -171,7 +173,7 @@ const styles = StyleSheet.create({
     color: colors.imperial600,
   },
   card: {
-    backgroundColor: 'rgba(255,255,255,0.6)',
+    backgroundColor: 'rgba(255,255,255,0.8)',
     borderRadius: 32,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.8)',
@@ -182,11 +184,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
     borderRadius: 24,
   },
   cardRowPressed: {
-    backgroundColor: colors.white,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.8)',
   },
   cardRowLeft: {
     flexDirection: 'row',
