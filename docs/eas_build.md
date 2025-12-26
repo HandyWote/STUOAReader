@@ -40,3 +40,7 @@
   - `android.package`: `oareader.handywote.top`
   - `extra.eas.projectId` 已绑定。
 
+
+## web端静态网站导出
+
+- `npx expo export -p web`
