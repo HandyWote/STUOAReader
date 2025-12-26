@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { BellRinging, CaretRight } from 'phosphor-react-native';
@@ -51,7 +52,7 @@ export default function SettingsScreen() {
   }, [router]);
 
   return (
-    <View style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea}>
       <AmbientBackground variant="explore" />
       <TopBar variant="explore" title="个人中心" dateText={formatDateLabel()} />
 
@@ -104,7 +105,7 @@ export default function SettingsScreen() {
         onAi={() => router.push('/(tabs)/explore')}
         onSettings={() => undefined}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

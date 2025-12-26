@@ -2,8 +2,6 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Bell } from 'phosphor-react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
 import { colors } from '@/constants/palette';
 import { shadows } from '@/constants/shadows';
 
@@ -28,14 +26,10 @@ export function TopBar({
   onPressAction,
   actions,
 }: TopBarProps) {
-  const insets = useSafeAreaInsets();
-  const homePaddingTop = HOME_TOP_PADDING + insets.top;
-  const explorePaddingTop = EXPLORE_TOP_PADDING + insets.top;
-
   if (variant === 'home') {
     return (
       <View style={styles.homeWrap}>
-        <BlurView intensity={60} tint="light" style={[styles.homeBlur, { paddingTop: homePaddingTop }]}>
+        <BlurView intensity={60} tint="light" style={styles.homeBlur}>
           <View style={[styles.homeBar, isScrolled && styles.homeBarScrolled]}>
             <View>
               <View style={styles.dateRowHome}>
@@ -59,7 +53,7 @@ export function TopBar({
   }
 
   return (
-    <View style={[styles.exploreWrap, { paddingTop: explorePaddingTop }]}>
+    <View style={styles.exploreWrap}>
       <BlurView intensity={60} tint="light" style={styles.exploreBlur}>
         <View style={styles.exploreBar}>
           <View>

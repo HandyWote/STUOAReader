@@ -9,7 +9,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Markdown from 'react-native-markdown-display';
 import { WebView } from 'react-native-webview';
@@ -172,7 +172,7 @@ export default function AiAssistantScreen() {
   }, [mermaidScript]);
 
   return (
-    <View style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea}>
       <AmbientBackground variant="explore" />
       <TopBar
         variant="explore"
@@ -256,7 +256,7 @@ export default function AiAssistantScreen() {
         detail={activeDetail}
         onClose={closeArticle}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
