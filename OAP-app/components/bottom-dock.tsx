@@ -1,9 +1,10 @@
 import React from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Gear, House, Sparkle } from 'phosphor-react-native';
 
 import { colors } from '@/constants/palette';
+import { shadows } from '@/constants/shadows';
 
 type DockTab = 'home' | 'ai' | 'settings';
 
@@ -78,20 +79,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.7)',
     overflow: 'hidden', 
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 1,
-      },
-      web: {
-        boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.08)',
-      },
-    }),
+    ...shadows.dock,
   },
   dockButton: {
     width: 44,
@@ -102,50 +90,14 @@ const styles = StyleSheet.create({
   },
   dockButtonHome: {
     backgroundColor: colors.imperial50,
-    ...Platform.select({
-      ios: {
-        shadowColor: colors.imperial500,
-        shadowOpacity: 0.18,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 2,
-      },
-      web: {
-        boxShadow: '0px 0px 12px rgba(192, 36, 37, 0.18)',
-      },
-    }),
+    ...shadows.glowImperial,
   },
   dockButtonAi: {
     backgroundColor: colors.gold50,
-    ...Platform.select({
-      ios: {
-        shadowColor: colors.gold500,
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 2,
-      },
-      web: {
-        boxShadow: '0px 0px 12px rgba(184, 134, 11, 0.15)',
-      },
-    }),
+    ...shadows.glowGold,
   },
   dockButtonSettings: {
     backgroundColor: colors.stone100,
-    ...Platform.select({
-      ios: {
-        shadowColor: colors.stone500,
-        shadowOpacity: 0.12,
-        shadowRadius: 10,
-      },
-      android: {
-        elevation: 2,
-      },
-      web: {
-        boxShadow: '0px 0px 10px rgba(107, 100, 97, 0.12)',
-      },
-    }),
+    ...shadows.glowStone,
   },
 });

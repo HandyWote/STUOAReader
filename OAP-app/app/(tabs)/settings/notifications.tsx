@@ -7,6 +7,7 @@ import { BellRinging, CaretLeft } from 'phosphor-react-native';
 import { AmbientBackground } from '@/components/ambient-background';
 import { TopBar } from '@/components/top-bar';
 import { colors } from '@/constants/palette';
+import { shadows } from '@/constants/shadows';
 import { isExpoGo } from '@/notifications/notification-env';
 import { registerNotificationTask, disableNotifications } from '@/notifications/notification-task';
 import { getNotificationsEnabled, setNotificationsEnabled } from '@/notifications/notification-storage';
@@ -114,20 +115,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.8)',
     padding: 8,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOpacity: 0.04,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 6 },
-      },
-      android: {
-        elevation: 2,
-      },
-      web: {
-        boxShadow: '0px 6px 10px rgba(0, 0, 0, 0.04)',
-      },
-    }),
+    ...shadows.cardSoft,
   },
   cardRow: {
     flexDirection: 'row',

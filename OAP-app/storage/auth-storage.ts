@@ -2,23 +2,25 @@
 
 type SecureStoreModule = typeof import('expo-secure-store');
 
+const { Platform } = require('react-native') as typeof import('react-native');
+
 const ACCESS_TOKEN_KEY = 'access_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
 const USER_PROFILE_KEY = 'user_profile';
 
-const isAppEnv = typeof window === 'undefined';
+const isWebEnv = Platform.OS === 'web';
 let SecureStore: SecureStoreModule | null = null;
 
-if (isAppEnv) {
+if (!isWebEnv) {
   SecureStore = require('expo-secure-store');
 }
 
 async function getItem(key: string) {
   try {
-    if (isAppEnv && SecureStore) {
+    if (!isWebEnv && SecureStore) {
       return await SecureStore.getItemAsync(key);
     }
-    if (typeof window !== 'undefined') {
+    if (typeof localStorage !== 'undefined') {
       return localStorage.getItem(key);
     }
   } catch (error) {
@@ -29,11 +31,11 @@ async function getItem(key: string) {
 
 async function setItem(key: string, value: string) {
   try {
-    if (isAppEnv && SecureStore) {
+    if (!isWebEnv && SecureStore) {
       await SecureStore.setItemAsync(key, value);
       return;
     }
-    if (typeof window !== 'undefined') {
+    if (typeof localStorage !== 'undefined') {
       localStorage.setItem(key, value);
     }
   } catch (error) {
@@ -43,11 +45,11 @@ async function setItem(key: string, value: string) {
 
 async function removeItem(key: string) {
   try {
-    if (isAppEnv && SecureStore) {
+    if (!isWebEnv && SecureStore) {
       await SecureStore.deleteItemAsync(key);
       return;
     }
-    if (typeof window !== 'undefined') {
+    if (typeof localStorage !== 'undefined') {
       localStorage.removeItem(key);
     }
   } catch (error) {

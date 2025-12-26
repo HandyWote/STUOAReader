@@ -1,6 +1,12 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
 import type { Article, ArticleDetail } from '@/types/article';
+import {
+  getAllKeys,
+  getItem,
+  multiGet,
+  multiRemove,
+  removeItem,
+  setItem,
+} from '@/storage/universal-storage';
 
 const DAY_KEY_PREFIX = 'articles.day.';
 const DETAIL_KEY_PREFIX = 'articles.detail.';
@@ -29,7 +35,7 @@ function detailKey(id: number) {
 }
 
 export async function pruneArticleCache() {
-  const keys = await AsyncStorage.getAllKeys();
+  const keys = await getAllKeys();
   const dayKeys = keys.filter((key) => key.startsWith(DAY_KEY_PREFIX));
   const detailKeys = keys.filter((key) => key.startsWith(DETAIL_KEY_PREFIX));
 
@@ -44,7 +50,7 @@ export async function pruneArticleCache() {
   });
 
   if (detailKeys.length > 0) {
-    const pairs = await AsyncStorage.multiGet(detailKeys);
+    const pairs = await multiGet(detailKeys);
     pairs.forEach(([key, raw]) => {
       if (!raw) {
         return;
@@ -62,13 +68,13 @@ export async function pruneArticleCache() {
   }
 
   if (toRemove.length > 0) {
-    await AsyncStorage.multiRemove(toRemove);
+    await multiRemove(toRemove);
   }
 }
 
 export async function getCachedArticlesByDate(dateStr: string) {
   const key = dayKey(dateStr);
-  const raw = await AsyncStorage.getItem(key);
+  const raw = await getItem(key);
   if (!raw) {
     return null;
   }
@@ -76,7 +82,7 @@ export async function getCachedArticlesByDate(dateStr: string) {
     const parsed = JSON.parse(raw) as CachedDay;
     return parsed.articles;
   } catch {
-    await AsyncStorage.removeItem(key);
+    await removeItem(key);
     return null;
   }
 }
@@ -87,12 +93,12 @@ export async function setCachedArticlesByDate(dateStr: string, articles: Article
     cached_at: Date.now(),
     articles,
   };
-  await AsyncStorage.setItem(dayKey(dateStr), JSON.stringify(payload));
+  await setItem(dayKey(dateStr), JSON.stringify(payload));
 }
 
 export async function getCachedArticleDetail(id: number) {
   const key = detailKey(id);
-  const raw = await AsyncStorage.getItem(key);
+  const raw = await getItem(key);
   if (!raw) {
     return null;
   }
@@ -100,7 +106,7 @@ export async function getCachedArticleDetail(id: number) {
     const parsed = JSON.parse(raw) as CachedDetail;
     return parsed.detail;
   } catch {
-    await AsyncStorage.removeItem(key);
+    await removeItem(key);
     return null;
   }
 }
@@ -114,5 +120,5 @@ export async function setCachedArticleDetail(detail: ArticleDetail) {
     published_on: detail.published_on,
     detail,
   };
-  await AsyncStorage.setItem(detailKey(detail.id), JSON.stringify(payload));
+  await setItem(detailKey(detail.id), JSON.stringify(payload));
 }

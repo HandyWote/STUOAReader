@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { BellRinging, CaretRight } from 'phosphor-react-native';
@@ -8,6 +8,7 @@ import { AmbientBackground } from '@/components/ambient-background';
 import { BottomDock } from '@/components/bottom-dock';
 import { TopBar } from '@/components/top-bar';
 import { colors } from '@/constants/palette';
+import { shadows } from '@/constants/shadows';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { setAuthToken } from '@/hooks/use-auth-token';
 import { clearAuthStorage } from '@/storage/auth-storage';
@@ -125,20 +126,7 @@ const styles = StyleSheet.create({
     height: 96,
     borderRadius: 48,
     padding: 4,
-    ...Platform.select({
-      ios: {
-        shadowColor: colors.gold200,
-        shadowOpacity: 0.6,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 6 },
-      },
-      android: {
-        elevation: 3,
-      },
-      web: {
-        boxShadow: '0px 6px 10px rgba(243, 224, 175, 0.6)',
-      },
-    }),
+    ...shadows.avatarRing,
   },
   avatarInner: {
     flex: 1,
@@ -188,20 +176,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.8)',
     padding: 8,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOpacity: 0.04,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 6 },
-      },
-      android: {
-        elevation: 2,
-      },
-      web: {
-        boxShadow: '0px 6px 10px rgba(0, 0, 0, 0.04)',
-      },
-    }),
+    ...shadows.cardSoft,
   },
   cardRow: {
     flexDirection: 'row',
@@ -238,20 +213,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.imperial100,
     alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOpacity: 0.04,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 6 },
-      },
-      android: {
-        elevation: 2,
-      },
-      web: {
-        boxShadow: '0px 6px 10px rgba(0, 0, 0, 0.04)',
-      },
-    }),
+    ...shadows.cardSoft,
   },
   logoutPressed: {
     transform: [{ scale: 0.98 }],

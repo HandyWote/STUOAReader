@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
   },
   listWrap: {
     flex: 1,
-    paddingTop: 110,
+    paddingTop: 24,
   },
   listContent: {
     paddingHorizontal: 20,

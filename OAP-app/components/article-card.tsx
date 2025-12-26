@@ -1,9 +1,10 @@
 import React from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowUpRight, Paperclip } from 'phosphor-react-native';
 
 import { colors } from '@/constants/palette';
+import { shadows } from '@/constants/shadows';
 import type { Article } from '@/types/article';
 import { formatTimeLabel } from '@/utils/date';
 
@@ -101,20 +102,7 @@ const styles = StyleSheet.create({
     padding: 22,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.7)',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#b8860b',
-        shadowOpacity: 0.08,
-        shadowRadius: 16,
-        shadowOffset: { width: 0, height: 10 },
-      },
-      android: {
-        elevation: 4,
-      },
-      web: {
-        boxShadow: '0px 10px 16px rgba(184, 134, 11, 0.08)',
-      },
-    }),
+    ...shadows.card,
     overflow: 'hidden',
   },
   cardGlow: {

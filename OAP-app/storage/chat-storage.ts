@@ -1,50 +1,11 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
 import type { ChatMessage } from '@/types/chat';
+import { getItem, removeItem, setItem } from '@/storage/universal-storage';
 
 const CHAT_HISTORY_KEY = 'ai_chat_history.v1';
-const isWeb = typeof window !== 'undefined';
-
 type CachedChat = {
   cached_at: number;
   messages: ChatMessage[];
 };
-
-async function getItem(key: string) {
-  try {
-    if (isWeb) {
-      return localStorage.getItem(key);
-    }
-    return await AsyncStorage.getItem(key);
-  } catch (error) {
-    console.error('Failed to read chat storage:', error);
-  }
-  return null;
-}
-
-async function setItem(key: string, value: string) {
-  try {
-    if (isWeb) {
-      localStorage.setItem(key, value);
-      return;
-    }
-    await AsyncStorage.setItem(key, value);
-  } catch (error) {
-    console.error('Failed to write chat storage:', error);
-  }
-}
-
-async function removeItem(key: string) {
-  try {
-    if (isWeb) {
-      localStorage.removeItem(key);
-      return;
-    }
-    await AsyncStorage.removeItem(key);
-  } catch (error) {
-    console.error('Failed to remove chat storage:', error);
-  }
-}
 
 export async function getChatHistory() {
   const raw = await getItem(CHAT_HISTORY_KEY);

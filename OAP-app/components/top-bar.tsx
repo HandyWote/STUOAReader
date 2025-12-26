@@ -1,9 +1,11 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View, Platform } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Bell } from 'phosphor-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '@/constants/palette';
+import { shadows } from '@/constants/shadows';
 
 type TopBarVariant = 'home' | 'explore';
 
@@ -26,10 +28,14 @@ export function TopBar({
   onPressAction,
   actions,
 }: TopBarProps) {
+  const insets = useSafeAreaInsets();
+  const homePaddingTop = HOME_TOP_PADDING + insets.top;
+  const explorePaddingTop = EXPLORE_TOP_PADDING + insets.top;
+
   if (variant === 'home') {
     return (
       <View style={styles.homeWrap}>
-        <BlurView intensity={60} tint="light" style={styles.homeBlur}>
+        <BlurView intensity={60} tint="light" style={[styles.homeBlur, { paddingTop: homePaddingTop }]}>
           <View style={[styles.homeBar, isScrolled && styles.homeBarScrolled]}>
             <View>
               <View style={styles.dateRowHome}>
@@ -53,7 +59,7 @@ export function TopBar({
   }
 
   return (
-    <View style={styles.exploreWrap}>
+    <View style={[styles.exploreWrap, { paddingTop: explorePaddingTop }]}>
       <BlurView intensity={60} tint="light" style={styles.exploreBlur}>
         <View style={styles.exploreBar}>
           <View>
@@ -79,17 +85,20 @@ export function TopBar({
   );
 }
 
+const HOME_TOP_PADDING = 18;
+const EXPLORE_TOP_PADDING = 44;
+
 const styles = StyleSheet.create({
   homeWrap: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? -20 : 0,
+    top: 0,
     left: 0,
     right: 0,
     zIndex: 20,
   },
   homeBlur: {
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 20 : 18,
+    paddingTop: HOME_TOP_PADDING,
     paddingBottom: 10,
   },
   homeBar: {
@@ -105,7 +114,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   exploreWrap: {
-    paddingTop: 44,
+    paddingTop: EXPLORE_TOP_PADDING,
     paddingHorizontal: 16,
     zIndex: 10,
   },
@@ -171,20 +180,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.gold100,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOpacity: 0.06,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 6 },
-      },
-      android: {
-        elevation: 3,
-      },
-      web: {
-        boxShadow: '0px 6px 10px rgba(0, 0, 0, 0.06)',
-      },
-    }),
+    ...shadows.soft,
   },
   actionRow: {
     flexDirection: 'row',

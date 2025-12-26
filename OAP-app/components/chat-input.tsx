@@ -1,8 +1,9 @@
 import React from 'react';
-import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { ArrowUp } from 'phosphor-react-native';
 
 import { colors } from '@/constants/palette';
+import { shadows } from '@/constants/shadows';
 
 type ChatInputProps = {
   value: string;
@@ -60,18 +61,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.imperial600,
     alignItems: 'center',
     justifyContent: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: colors.imperial600,
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
-      },
-      android: {
-        elevation: 4,
-      },
-      web: {
-        boxShadow: '0px 0px 10px rgba(155, 28, 28, 0.3)',
-      },
-    }),
+    ...shadows.glowImperialStrong,
   },
 });

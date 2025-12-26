@@ -17,6 +17,7 @@ import { useRouter } from 'expo-router';
 
 import { AmbientBackground } from '@/components/ambient-background';
 import { colors } from '@/constants/palette';
+import { shadows } from '@/constants/shadows';
 import { getApiBaseUrl } from '@/services/api';
 import { setAuthToken } from '@/hooks/use-auth-token';
 import { setRefreshToken, setUserProfileRaw } from '@/storage/auth-storage';
@@ -188,20 +189,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.3)',
-    ...Platform.select({
-      ios: {
-        shadowColor: colors.imperial500,
-        shadowOpacity: 0.25,
-        shadowRadius: 16,
-        shadowOffset: { width: 0, height: 8 },
-      },
-      android: {
-        elevation: 6,
-      },
-      web: {
-        boxShadow: '0px 8px 16px rgba(192, 36, 37, 0.25)',
-      },
-    }),
+    ...shadows.logo,
   },
   title: {
     fontSize: 42,
@@ -240,20 +228,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.85)',
     paddingHorizontal: 20,
     paddingVertical: 4,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 6 },
-      },
-      android: {
-        elevation: 2,
-      },
-      web: {
-        boxShadow: '0px 6px 10px rgba(0, 0, 0, 0.05)',
-      },
-    }),
+    ...shadows.softSubtle,
   },
   input: {
     height: 48,
@@ -272,20 +247,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     borderWidth: 1,
     borderColor: colors.stone800,
-    ...Platform.select({
-      ios: {
-        shadowColor: colors.stone800,
-        shadowOpacity: 0.2,
-        shadowRadius: 18,
-        shadowOffset: { width: 0, height: 8 },
-      },
-      android: {
-        elevation: 8,
-      },
-      web: {
-        boxShadow: '0px 8px 18px rgba(43, 33, 30, 0.2)',
-      },
-    }),
+    ...shadows.primary,
   },
   loginButtonPressed: {
     transform: [{ scale: 0.98 }],

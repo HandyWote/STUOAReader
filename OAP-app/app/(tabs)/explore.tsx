@@ -24,6 +24,7 @@ import { SourceList } from '@/components/source-list';
 import { ThinkingIndicator } from '@/components/thinking-indicator';
 import { TopBar } from '@/components/top-bar';
 import { colors } from '@/constants/palette';
+import { shadows } from '@/constants/shadows';
 import { useAiChat } from '@/hooks/use-ai-chat';
 import { useAuthToken } from '@/hooks/use-auth-token';
 import { useDisplayName } from '@/hooks/use-display-name';
@@ -61,7 +62,7 @@ export default function AiAssistantScreen() {
   const token = useAuthToken();
   const displayName = useDisplayName('用户');
   const mermaidScript = useMermaidScript();
-  const { messages, isThinking, sendChat, clearChat } = useAiChat(token);
+  const { messages, isThinking, sendChat, clearChat } = useAiChat(token, displayName);
   const insets = useSafeAreaInsets();
 
   const greeting = useMemo(() => `${getDayPeriod(new Date())}，${displayName}`, [displayName]);
@@ -328,19 +329,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: colors.gold500,
-        shadowOpacity: 0.12,
-        shadowRadius: 16,
-      },
-      android: {
-        elevation: 3,
-      },
-      web: {
-        boxShadow: '0px 0px 16px rgba(184, 134, 11, 0.12)',
-      },
-    }),
+    ...shadows.glowGoldSoft,
   },
   emptyTitle: {
     marginTop: 18,
@@ -378,19 +367,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.gold100,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOpacity: 0.06,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 6 },
-      },
-      android: {
-        elevation: 3,
-      },
-      web: {
-        boxShadow: '0px 6px 10px rgba(0, 0, 0, 0.06)',
-      },
-    }),
+    ...shadows.soft,
   },
 });
