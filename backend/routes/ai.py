@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 from datetime import date, datetime
-from typing import Any, Iterable, TypedDict
+from typing import Any, Iterable, TypedDict, Annotated
 import json
 from functools import lru_cache
 
@@ -17,6 +17,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import tool
 from langgraph.graph import StateGraph, END
+from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode, tools_condition
 
 from backend.db import db_session
@@ -52,14 +53,19 @@ def _format_message_for_log(message: BaseMessage) -> dict[str, Any]:
     payload: dict[str, Any] = {"type": message.__class__.__name__}
     content = getattr(message, "content", None)
     if isinstance(content, str):
+        payload["content"] = content
         payload["content_len"] = len(content)
-        payload["content_preview"] = content[:200]
+    else:
+        payload["content"] = content
     tool_calls = getattr(message, "tool_calls", None)
     if tool_calls:
         payload["tool_calls"] = tool_calls
     tool_call_id = getattr(message, "tool_call_id", None)
     if tool_call_id:
         payload["tool_call_id"] = tool_call_id
+    additional_kwargs = getattr(message, "additional_kwargs", None)
+    if additional_kwargs:
+        payload["additional_kwargs"] = additional_kwargs
     return payload
 
 
@@ -67,7 +73,11 @@ def _log_messages(stage: str, messages: list[BaseMessage]) -> None:
     logger.info(
         "AI请求messages(%s): %s",
         stage,
-        json.dumps([_format_message_for_log(msg) for msg in messages], ensure_ascii=False),
+        json.dumps(
+            [_format_message_for_log(msg) for msg in messages],
+            ensure_ascii=False,
+            default=str,
+        ),
     )
 
 
@@ -205,17 +215,27 @@ def _build_memory_messages(history: list[dict[str, str]]) -> list[BaseMessage]:
     return messages
 
 
-def _build_system_prompt(top_k_hint: int) -> str:
+def _build_system_prompt(top_k_hint: int, display_name: str | None = None) -> str:
+    from datetime import datetime
+    time_now = datetime.now()
+    identity_hint = f"当前用户的名字：{display_name}。可酌情称呼，但不强制。\n" if display_name else "\n"
     return (
-        "你是校内OA智能助理。你可以选择是否调用向量检索工具获取OA文章内容。\n"
-        "只有在需要引用或解释OA文章时才调用工具。\n"
-        "调用工具时可设置 top_k (1-10)。用户期望 top_k 参考值为 "
-        f"{top_k_hint}。\n"
-        "工具参数 detail_level:\n"
-        "- brief: 适合关键词查询、单一事实、简单问答，仅返回摘要/片段。\n"
-        "- full: 适合复杂问题（推理、对比、多事件统筹、政策解读），返回全文内容。\n"
-        "若不调用工具，请直接回答用户问题。\n"
-        "若调用工具，请根据工具返回内容作答，不要编造OA中不存在的信息。"
+f"""
+你是校内OA管理员瑞德，专注于帮人查找和解读OA系统中的相关文章。你会根据问题的具体需求，自主判断是否需要检索文章内容来为你提供准确信息。
+**你的工作方式：**
+1. **常规问题**：如果用户的提问不涉及具体文章内容（例如流程咨询、功能指引），你会直接基于知识作答。
+2. **文章查询**：当问题涉及具体政策、通知、文章细节时，你会主动检索相关文章，确保信息准确。
+3. **检索设置**：检索时要根据问题复杂度自动选择：
+   - **简要检索** (`detail_level: brief`)：适用于关键词查询、简单事实确认。
+   - **全文检索** (`detail_level: full`)：适用于复杂分析、政策解读或多文章对比。
+   - **检索数量** (`top_k`)：通常设置为 `{top_k_hint}` 篇左右，确保覆盖核心内容，如果返回的结果你认为无法覆盖，你将会进行下一次搜索，最多多搜索一次。
+**！！注意：**
+- 你要严格依据OA系统内现有信息作答，不编造未收录的内容。
+- 如需深入分析，建议用户提供具体的关键词或背景，你会更精准地定位文章。
+- 如果用户的问题与OA系统无关，你会礼貌提醒并引导其关注相关事务。
+{identity_hint}
+当前日期和时间：{time_now.strftime("%Y年%m月%d日 %H:%M")}
+"""
     )
 
 
@@ -224,6 +244,14 @@ def vector_search_tool(query: str, top_k: int = 3, detail_level: str = "brief") 
     """OA向量检索工具：返回相关文章内容与摘要。"""
     normalized_top_k = max(1, min(10, int(top_k)))
     normalized_level = "full" if detail_level == "full" else "brief"
+    logger.info(
+        "AI工具调用 vector_search: %s",
+        json.dumps(
+            {"query": query, "top_k": normalized_top_k, "detail_level": normalized_level},
+            ensure_ascii=False,
+            default=str,
+        ),
+    )
     embedding = generate_embedding(query)
     if not embedding:
         payload = {"error": "embedding_failed", "documents": [], "related_articles": []}
@@ -252,11 +280,20 @@ def vector_search_tool(query: str, top_k: int = 3, detail_level: str = "brief") 
         "documents": documents,
         "related_articles": related_articles,
     }
-    return json.dumps(payload, ensure_ascii=False)
+    payload_text = json.dumps(payload, ensure_ascii=False, default=str)
+    logger.info(
+        "AI工具返回 vector_search: %s",
+        json.dumps(
+            {"len": len(payload_text), "preview": payload_text[:500]},
+            ensure_ascii=False,
+            default=str,
+        ),
+    )
+    return payload_text
 
 
 class AgentState(TypedDict):
-    messages: list[BaseMessage]
+    messages: Annotated[list[BaseMessage], add_messages]
 
 
 @lru_cache(maxsize=1)
@@ -273,6 +310,7 @@ def _build_agent() -> Any:
     def agent_node(state: AgentState) -> dict[str, list[BaseMessage]]:
         _log_messages("before_llm", state["messages"])
         response = llm_with_tools.invoke(state["messages"])
+        _log_messages("after_llm", state["messages"] + [response])
         return {"messages": state["messages"] + [response]}
 
     graph = StateGraph(AgentState)
@@ -356,7 +394,7 @@ def ask_question():
     根据用户的问题，使用向量相似度搜索找到相关文章，然后生成回答。
     
     请求体：
-        {"question": "你的问题", "top_k": 3}  # top_k是可选的
+        {"question": "你的问题", "top_k": 3, "display_name": "张三"}  # top_k是可选的
         
     返回：
         包含回答和相关文章的JSON响应
@@ -369,15 +407,33 @@ def ask_question():
         
         question = data['question']
         top_k_hint = data.get('top_k', 3)
+        display_name = data.get('display_name')
         if not config.ai_base_url or not config.api_key or not config.ai_model:
             return jsonify({"error": "AI服务配置不完整"}), 500
 
         user_claims = getattr(request, "auth_claims", {})
         user_id = str(user_claims.get("sub") or "")
         history = _load_short_memory(user_id) if user_id else []
+        logger.info(
+            "AI请求入参: %s",
+            json.dumps(
+                {
+                    "question": question,
+                    "top_k_hint": top_k_hint,
+                    "display_name": display_name,
+                    "user_id": user_id,
+                    "ai_base_url": config.ai_base_url,
+                    "normalized_base_url": _normalize_ai_base_url(config.ai_base_url),
+                    "ai_model": config.ai_model,
+                    "history_len": len(history),
+                },
+                ensure_ascii=False,
+                default=str,
+            ),
+        )
 
         messages: list[BaseMessage] = [
-            SystemMessage(content=_build_system_prompt(top_k_hint)),
+            SystemMessage(content=_build_system_prompt(top_k_hint, display_name)),
             *_build_memory_messages(history),
             HumanMessage(content=question),
         ]
@@ -391,6 +447,18 @@ def ask_question():
         if user_id:
             _save_short_memory(user_id, question, answer)
 
+        logger.info(
+            "AI响应摘要: %s",
+            json.dumps(
+                {
+                    "answer_len": len(answer),
+                    "answer_preview": answer[:500],
+                    "related_articles_len": len(related_articles),
+                },
+                ensure_ascii=False,
+                default=str,
+            ),
+        )
         return jsonify({
             "answer": answer,
             "related_articles": related_articles
@@ -399,6 +467,26 @@ def ask_question():
     except Exception as e:
         logger.error(f"AI问答失败: {e}")
         return jsonify({"error": "AI问答失败"}), 500
+
+
+@bp.route('/clear_memory', methods=['POST'])
+@login_required
+def clear_memory():
+    """清空用户的AI短记忆缓存。"""
+    try:
+        user_claims = getattr(request, "auth_claims", {})
+        user_id = str(user_claims.get("sub") or "")
+        if not user_id:
+            return jsonify({"error": "用户信息缺失"}), 400
+        if cache:
+            cleared = cache.delete(_memory_key(user_id))
+        else:
+            cleared = True
+        logger.info("AI记忆清理: %s", json.dumps({"user_id": user_id, "cleared": cleared}, ensure_ascii=False))
+        return jsonify({"cleared": bool(cleared)}), 200
+    except Exception as e:
+        logger.error(f"AI记忆清理失败: {e}")
+        return jsonify({"error": "AI记忆清理失败"}), 500
 
 
 @bp.route('/embed', methods=['POST'])
