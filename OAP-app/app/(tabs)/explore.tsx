@@ -1,7 +1,7 @@
 
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  KeyboardAvoidingView,
+  Keyboard,
   Platform,
   Pressable,
   ScrollView,
@@ -64,6 +64,24 @@ export default function AiAssistantScreen() {
   const mermaidScript = useMermaidScript();
   const { messages, isThinking, sendChat, clearChat } = useAiChat(token, displayName);
   const insets = useSafeAreaInsets();
+
+  // 键盘高度状态
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  // 监听键盘显示/隐藏事件
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   const greeting = useMemo(() => `${getDayPeriod(new Date())}，${displayName}`, [displayName]);
   const lastAiMessageId = useMemo(() => {
@@ -185,16 +203,10 @@ export default function AiAssistantScreen() {
         )}
       />
 
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.select({ ios: 'padding', android: undefined })}
-      >
+      <View style={styles.flex}>
         <ScrollView
           ref={scrollRef}
-          contentContainerStyle={[
-            styles.chatContainer,
-            { paddingBottom: dockOffset + inputHeight + 24 },
-          ]}
+          contentContainerStyle={styles.chatContainer}
           showsVerticalScrollIndicator={false}
           onContentSizeChange={scrollToEnd}
         >
@@ -238,10 +250,10 @@ export default function AiAssistantScreen() {
           
         </ScrollView>
 
-        <View style={{ paddingBottom: dockOffset }}>
+        <View style={[styles.inputContainer, { paddingBottom: keyboardHeight > 0 ? keyboardHeight : dockOffset }]}>
           <ChatInput value={input} onChangeText={setInput} onSend={sendChatMessage} />
         </View>
-      </KeyboardAvoidingView>
+      </View>
 
       <BottomDock
         activeTab="ai"
@@ -368,5 +380,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gold100,
     ...shadows.soft,
+  },
+  inputContainer: {
+    paddingHorizontal: 18,
+    paddingBottom: 12,
   },
 });
