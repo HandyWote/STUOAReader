@@ -9,7 +9,12 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/images/icon.png"
+      },
+      "supportsTablet": true,
+      "bundleIdentifier": "top.handywote.oareader"
     },
     "android": {
       "adaptiveIcon": {

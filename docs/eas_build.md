@@ -15,6 +15,7 @@
 4. 触发构建
    - 在 `OAP-app` 目录执行：
      - `eas build --platform android --profile production`
+     - `eas build --platform all --profile production`
 5. 等待构建完成并下载产物
    - CLI 会输出构建链接，进入链接下载 AAB/APK。
 
