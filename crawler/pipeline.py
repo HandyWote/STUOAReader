@@ -26,7 +26,7 @@ from crawler.models import ArticleRecord, ArticleMeta
 from crawler.storage import ArticleRepository
 from crawler.summarizer import Summarizer
 from crawler.db import db_session
-from crawler.cache import refresh_article_cache
+from crawler.cache import refresh_today_cache, refresh_article_detail_cache
 
 
 
@@ -199,11 +199,14 @@ class Crawler:
                     print(f"✅ 入库完成，新增 {inserted} 条")
                     if inserted > 0:
                         cached_articles = self.repo.fetch_for_cache(conn, self.target_date)
-                        refreshed = refresh_article_cache(cached_articles, self.target_date)
-                        if refreshed > 0:
-                            print(f"✅ 已刷新文章缓存，更新 {refreshed} 条")
-                        else:
-                            print("⚠️ 未刷新到缓存，可能未启用Redis或无数据")
+
+                        # 刷新 today 缓存（新逻辑）
+                        today_refreshed = refresh_today_cache(cached_articles, self.target_date)
+
+                        # 刷新 article detail 缓存
+                        detail_refreshed = refresh_article_detail_cache(cached_articles, self.target_date)
+
+                        print(f"✅ 已刷新文章缓存: today={today_refreshed}, detail={detail_refreshed}")
 
                     # 为新增文章生成向量
                     print("正在生成文章向量...")

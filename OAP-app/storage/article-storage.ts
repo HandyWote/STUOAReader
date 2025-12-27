@@ -10,6 +10,8 @@ import {
 
 const DAY_KEY_PREFIX = 'articles.day.';
 const DETAIL_KEY_PREFIX = 'articles.detail.';
+const PAGINATION_KEY = 'articles.pagination.state';
+
 type CachedDay = {
   date: string;
   cached_at: number;
@@ -22,6 +24,13 @@ type CachedDetail = {
   detail: ArticleDetail;
 };
 
+/** 分页状态存储 */
+export type PaginationState = {
+  next_before_id: number | null;
+  has_more: boolean;
+  updated_at: number;
+};
+
 export function getTodayDateString() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -32,6 +41,32 @@ function dayKey(dateStr: string) {
 
 function detailKey(id: number) {
   return `${DETAIL_KEY_PREFIX}${id}`;
+}
+
+/** 获取分页状态 */
+export async function getPaginationState(): Promise<PaginationState | null> {
+  const raw = await getItem(PAGINATION_KEY);
+  if (!raw) {
+    return null;
+  }
+  try {
+    return JSON.parse(raw) as PaginationState;
+  } catch {
+    return null;
+  }
+}
+
+/** 保存分页状态 */
+export async function setPaginationState(state: PaginationState) {
+  await setItem(
+    PAGINATION_KEY,
+    JSON.stringify({ ...state, updated_at: Date.now() })
+  );
+}
+
+/** 清除分页状态 */
+export async function clearPaginationState() {
+  await removeItem(PAGINATION_KEY);
 }
 
 export async function pruneArticleCache() {

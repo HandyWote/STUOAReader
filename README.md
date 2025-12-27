@@ -122,8 +122,8 @@ API请求 → 路由层 → 业务逻辑层 → 数据访问层
 - `utils/` - 工具类（Redis缓存）
 
 **缓存策略：**
-- 文章列表：ETag + Last-Modified，支持304响应
-- 文章详情：ETag缓存，1小时过期
+- 文章列表：三层缓存（today/page/detail），支持预缓存
+- 文章详情：ETag缓存，3天过期
 - AI对话历史：Redis存储，24小时TTL
 
 #### 3. crawler - 数据爬取与处理管道
@@ -176,24 +176,45 @@ Crawler爬取OA列表
     ↓
 调用嵌入服务生成向量
     ↓
+生成向量嵌入
+    ↓
 存储到PostgreSQL（articles表 + vectors表）
     ↓
-刷新Redis缓存（articles:list:{date}）
+刷新Redis缓存（articles:today + articles:detail:{id}）
 ```
 
 ### 2. 用户查询流程
 
 #### 文章列表查询
+
+**首页加载当天所有文章：**
 ```
 用户打开App
     ↓
-请求 /api/articles?date=YYYY-MM-DD
+请求 /api/articles/today
     ↓
-检查Redis缓存
+检查Redis缓存（articles:today）
     ├─ 命中 → 返回缓存数据（带ETag）
-    └─ 未命中 → 查询PostgreSQL
+    └─ 未命中 → 查询PostgreSQL（WHERE published_on = TODAY）
                   ↓
-              存入Redis缓存
+              存入Redis缓存（TTL=24h）
+                  ↓
+              返回数据（带ETag）
+```
+
+**滚动加载更旧文章：**
+```
+用户滑动到底部
+    ↓
+请求 /api/articles?before_id=81&limit=20
+    ↓
+检查Redis缓存（articles:page:81:20）
+    ├─ 命中 → 返回缓存数据（带ETag）
+    └─ 未命中 → 查询PostgreSQL（WHERE id < 81 ORDER BY id DESC LIMIT 20）
+                  ↓
+              存入Redis缓存（TTL=3天）
+                  ↓
+              异步预缓存下一页（articles:page:61:20）
                   ↓
               返回数据（带ETag）
 ```
@@ -296,9 +317,10 @@ npm start
 ## 📊 技术亮点
 
 ### 1. 智能缓存策略
+- **三层缓存**：`articles:today`（24h）、`articles:page:{before_id}:{limit}`（3天）、`articles:detail:{id}`（3天）
 - **ETag机制**：客户端可利用304 Not Modified减少网络传输
-- **多级缓存**：Redis缓存 + 客户端本地存储
-- **增量更新**：支持since参数，只获取新增数据
+- **预缓存**：返回分页数据时异步缓存下一页，提高连续滑动命中率
+- **客户端缓存**：AsyncStorage 本地存储
 
 ### 2. 向量搜索优化
 - **pgvector集成**：高性能向量相似度搜索
@@ -322,7 +344,7 @@ npm start
 ### 主要端点概览
 
 - **认证**：`POST /api/auth/token`、`POST /api/auth/token/refresh`、`POST /api/auth/logout`、`GET /api/auth/me`
-- **文章**：`GET /api/articles`、`GET /api/articles/{id}`、`GET /api/articles/latest`、`GET /api/articles/by-date/{date}`
+- **文章**：`GET /api/articles/today`、`GET /api/articles?before_id={id}&limit={n}`、`GET /api/articles/{id}`
 - **AI**：`POST /api/ai/ask`、`POST /api/ai/clear_memory`、`POST /api/ai/embed`
 
 ## 🔧 配置说明

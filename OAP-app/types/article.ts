@@ -24,3 +24,10 @@ export type RelatedArticle = {
   content_snippet?: string;
   summary_snippet?: string;
 };
+
+/** 新增分页响应类型 */
+export type PaginatedArticlesResponse = {
+  articles: Article[];
+  next_before_id: number | null;
+  has_more: boolean;
+};

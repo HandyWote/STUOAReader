@@ -1,4 +1,4 @@
-import type { Article, ArticleDetail, RelatedArticle } from '@/types/article';
+import type { Article, ArticleDetail, RelatedArticle, PaginatedArticlesResponse } from '@/types/article';
 import { buildAuthHeaders, getApiBaseUrl } from '@/services/api';
 
 export async function fetchArticles(token?: string | null) {
@@ -11,6 +11,36 @@ export async function fetchArticles(token?: string | null) {
   const data = await resp.json();
   const list = Array.isArray(data?.articles) ? data.articles : [];
   return list as Article[];
+}
+
+/** 获取当天最新文章（首页专用） */
+export async function fetchTodayArticles(
+  token?: string | null
+): Promise<PaginatedArticlesResponse> {
+  const url = `${getApiBaseUrl()}/articles/today`;
+  const resp = await fetch(url, {
+    headers: buildAuthHeaders(token),
+  });
+  if (!resp.ok) {
+    throw new Error('today articles fetch failed');
+  }
+  return (await resp.json()) as PaginatedArticlesResponse;
+}
+
+/** 加载更旧的文章（分页） */
+export async function fetchArticlesBeforeId(
+  beforeId: number,
+  token?: string | null,
+  limit: number = 20
+): Promise<PaginatedArticlesResponse> {
+  const url = `${getApiBaseUrl()}/articles/?before_id=${beforeId}&limit=${limit}`;
+  const resp = await fetch(url, {
+    headers: buildAuthHeaders(token),
+  });
+  if (!resp.ok) {
+    throw new Error('paginated articles fetch failed');
+  }
+  return (await resp.json()) as PaginatedArticlesResponse;
 }
 
 export async function fetchArticleDetail(id: number, token?: string | null) {

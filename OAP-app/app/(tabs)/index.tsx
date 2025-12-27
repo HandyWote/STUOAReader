@@ -1,11 +1,13 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Animated,
   FlatList,
   RefreshControl,
   StatusBar,
   StyleSheet,
+  View,
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -42,11 +44,14 @@ export default function HomeScreen() {
     articles,
     isLoading,
     isRefreshing,
+    isLoadingMore,
     activeArticle,
     activeDetail,
     sheetVisible,
     readIds,
+    hasMore,
     loadArticles,
+    loadMoreArticles,
     refreshArticles,
     openArticle,
     closeArticle,
@@ -86,6 +91,18 @@ export default function HomeScreen() {
     [openArticle, readIds]
   );
 
+  // 加载更多的 Footer 组件
+  const renderFooter = useCallback(() => {
+    if (!isLoadingMore) {
+      return null;
+    }
+    return (
+      <View style={styles.loadingFooter}>
+        <ActivityIndicator size="small" color={colors.gold500} />
+      </View>
+    );
+  }, [isLoadingMore]);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" />
@@ -118,9 +135,10 @@ export default function HomeScreen() {
                 tintColor={colors.gold500}
               />
             }
-            ListEmptyComponent={
-              <HomeEmptyState />
-            }
+            onEndReached={loadMoreArticles}
+            onEndReachedThreshold={0.2}
+            ListEmptyComponent={<HomeEmptyState />}
+            ListFooterComponent={renderFooter}
           />
         )}
       </Animated.View>
@@ -154,5 +172,9 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 20,
     paddingBottom: 130,
+  },
+  loadingFooter: {
+    paddingVertical: 16,
+    alignItems: 'center',
   },
 });
