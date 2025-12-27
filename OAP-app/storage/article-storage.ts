@@ -122,3 +122,13 @@ export async function setCachedArticleDetail(detail: ArticleDetail) {
   };
   await setItem(detailKey(detail.id), JSON.stringify(payload));
 }
+
+export async function clearAllArticleCache() {
+  const keys = await getAllKeys();
+  const articleKeys = keys.filter(
+    (key) => key.startsWith(DAY_KEY_PREFIX) || key.startsWith(DETAIL_KEY_PREFIX)
+  );
+  if (articleKeys.length > 0) {
+    await multiRemove(articleKeys);
+  }
+}

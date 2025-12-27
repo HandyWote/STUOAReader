@@ -1,19 +1,25 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { CaretLeft, Code } from 'phosphor-react-native';
-
+import { CaretLeft, Code, Info, Timer } from 'phosphor-react-native';
+import * as BackgroundFetch from 'expo-background-fetch';
+import { isExpoGo } from '@/notifications/notification-env';
 import { AmbientBackground } from '@/components/ambient-background';
 import { TopBar } from '@/components/top-bar';
 import { colors } from '@/constants/palette';
 import { shadows } from '@/constants/shadows';
 import { useUserProfile } from '@/hooks/use-user-profile';
-import { triggerTestNotification } from '@/notifications/notification-task';
+import { triggerTestNotification, delayedPollTest } from '@/notifications/notification-task';
 import {
   clearNotificationLogs,
   getNotificationLogs,
   NotificationPollLog,
 } from '@/notifications/notification-log';
+import {
+  getLastSince,
+  getNextAllowedAt,
+  getNotificationsEnabled,
+} from '@/notifications/notification-storage';
 import { formatDateLabel } from '@/utils/date';
 
 const statusLabels: Record<string, string> = {
@@ -30,6 +36,9 @@ const statusLabels: Record<string, string> = {
   exception: '异常',
   manual_test: '手动测试',
   manual_test_blocked: '测试受限',
+  delayed_test_scheduled: '延迟测试已启动',
+  delayed_test_result: '延迟测试结果',
+  delayed_test_failed: '延迟测试失败',
 };
 
 function formatLogTime(value?: string) {
@@ -43,12 +52,64 @@ function formatLogTime(value?: string) {
   return date.toLocaleString();
 }
 
+function formatTimestamp(ms?: number | null) {
+  if (!ms) {
+    return '-';
+  }
+  const date = new Date(ms);
+  if (Number.isNaN(date.getTime())) {
+    return '-';
+  }
+  return date.toLocaleString();
+}
+
+function isWithinWindowNow() {
+  const hour = new Date().getHours();
+  return hour >= 8 && hour < 24;
+}
+
+type DiagnosticStatus = {
+  platform: string;
+  isExpoGo: boolean;
+  notificationsEnabled: boolean;
+  taskRegistered: boolean;
+  lastSince: string | null;
+  nextAllowedAt: string | null;
+  inTimeWindow: boolean;
+};
+
 export default function DeveloperSettingsScreen() {
   const router = useRouter();
   const profile = useUserProfile();
   const displayName = profile?.display_name || profile?.username || '';
   const isAdmin = displayName.trim().toLowerCase() === 'admin';
   const [logs, setLogs] = useState<NotificationPollLog[]>([]);
+  const [diagnostics, setDiagnostics] = useState<DiagnosticStatus | null>(null);
+  const [delayedTestRemaining, setDelayedTestRemaining] = useState<number | null>(null);
+  const [delayedTestRunning, setDelayedTestRunning] = useState(false);
+  const isMountedRef = useRef(true);
+
+  const loadDiagnostics = useCallback(async () => {
+    const enabled = await getNotificationsEnabled();
+    const lastSince = await getLastSince();
+    const nextAllowedAt = await getNextAllowedAt();
+    let taskRegistered = false;
+    try {
+      const tasks = await BackgroundFetch.getRegisteredTasksAsync();
+      taskRegistered = tasks.some((task) => task.taskName === 'oap-articles-background-fetch');
+    } catch {
+      taskRegistered = false;
+    }
+    setDiagnostics({
+      platform: Platform.OS,
+      isExpoGo: isExpoGo(),
+      notificationsEnabled: enabled,
+      taskRegistered,
+      lastSince: formatTimestamp(lastSince),
+      nextAllowedAt: formatTimestamp(nextAllowedAt),
+      inTimeWindow: isWithinWindowNow(),
+    });
+  }, []);
 
   const loadLogs = useCallback(async () => {
     const next = await getNotificationLogs();
@@ -56,8 +117,15 @@ export default function DeveloperSettingsScreen() {
   }, []);
 
   useEffect(() => {
+    loadDiagnostics();
     loadLogs();
-  }, [loadLogs]);
+  }, [loadDiagnostics, loadLogs]);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const handleTestNotification = useCallback(async () => {
     if (Platform.OS !== 'android') {
@@ -71,12 +139,37 @@ export default function DeveloperSettingsScreen() {
       Alert.alert('提示', '已触发模拟通知。');
     }
     await loadLogs();
-  }, [loadLogs]);
+    await loadDiagnostics();
+  }, [loadLogs, loadDiagnostics]);
 
   const handleClearLogs = useCallback(async () => {
     await clearNotificationLogs();
     await loadLogs();
   }, [loadLogs]);
+
+  const handleDelayedPollTest = useCallback(async () => {
+    if (Platform.OS !== 'android') {
+      Alert.alert('提示', '仅 Android 支持延迟轮询测试。');
+      return;
+    }
+    setDelayedTestRunning(true);
+    setDelayedTestRemaining(60);
+    const result = await delayedPollTest(60 * 1000, (remaining) => {
+      if (isMountedRef.current) {
+        setDelayedTestRemaining(remaining);
+      }
+    });
+    if (!isMountedRef.current) {
+      return;
+    }
+    setDelayedTestRunning(false);
+    setDelayedTestRemaining(null);
+    if (!result.ok && result.status === 'delayed_test_failed') {
+      Alert.alert('提示', '当前环境不支持延迟测试，请使用开发构建。');
+    }
+    await loadLogs();
+    await loadDiagnostics();
+  }, [loadLogs, loadDiagnostics]);
 
   const logItems = useMemo(() => logs, [logs]);
 
@@ -104,6 +197,56 @@ export default function DeveloperSettingsScreen() {
       <TopBar variant="explore" title="开发者模式" dateText={formatDateLabel()} />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* 状态诊断卡片 */}
+        {diagnostics && (
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <View style={styles.cardIcon}>
+                <Info size={16} color={colors.stone600} weight="fill" />
+              </View>
+              <Text style={styles.cardTitle}>状态诊断</Text>
+            </View>
+            <View style={styles.diagList}>
+              <View style={styles.diagRow}>
+                <Text style={styles.diagLabel}>平台</Text>
+                <Text style={styles.diagValue}>{diagnostics.platform}</Text>
+              </View>
+              <View style={styles.diagRow}>
+                <Text style={styles.diagLabel}>运行环境</Text>
+                <Text style={[styles.diagValue, diagnostics.isExpoGo && styles.diagError]}>
+                  {diagnostics.isExpoGo ? 'Expo Go (不支持)' : '开发构建'}
+                </Text>
+              </View>
+              <View style={styles.diagRow}>
+                <Text style={styles.diagLabel}>通知开关</Text>
+                <Text style={[styles.diagValue, !diagnostics.notificationsEnabled && styles.diagWarning]}>
+                  {diagnostics.notificationsEnabled ? '已开启' : '已关闭'}
+                </Text>
+              </View>
+              <View style={styles.diagRow}>
+                <Text style={styles.diagLabel}>后台任务</Text>
+                <Text style={[styles.diagValue, !diagnostics.taskRegistered && styles.diagWarning]}>
+                  {diagnostics.taskRegistered ? '已注册' : '未注册'}
+                </Text>
+              </View>
+              <View style={styles.diagRow}>
+                <Text style={styles.diagLabel}>时间窗</Text>
+                <Text style={[styles.diagValue, !diagnostics.inTimeWindow && styles.diagWarning]}>
+                  {diagnostics.inTimeWindow ? '在时间窗内 (8:00-24:00)' : '不在时间窗'}
+                </Text>
+              </View>
+              <View style={styles.diagRow}>
+                <Text style={styles.diagLabel}>上次轮询时间</Text>
+                <Text style={styles.diagValue}>{diagnostics.lastSince}</Text>
+              </View>
+              <View style={styles.diagRow}>
+                <Text style={styles.diagLabel}>下次允许轮询</Text>
+                <Text style={styles.diagValue}>{diagnostics.nextAllowedAt}</Text>
+              </View>
+            </View>
+          </View>
+        )}
+
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <View style={styles.cardIcon}>
@@ -118,6 +261,36 @@ export default function DeveloperSettingsScreen() {
             </Pressable>
             <Pressable onPress={handleClearLogs} style={styles.secondaryButton}>
               <Text style={styles.secondaryButtonText}>清空记录</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardIcon}>
+              <Timer size={16} color={colors.stone600} weight="fill" />
+            </View>
+            <Text style={styles.cardTitle}>延迟轮询测试</Text>
+          </View>
+          <Text style={styles.cardDesc}>
+            点击后等待1分钟，然后执行一次真实的文章检查请求。无论是否有更新都会弹出系统通知。
+          </Text>
+          {delayedTestRunning && delayedTestRemaining !== null && (
+            <View style={styles.countdownContainer}>
+              <Text style={styles.countdownText}>
+                {delayedTestRemaining > 0 ? `${delayedTestRemaining} 秒后执行...` : '执行中...'}
+              </Text>
+            </View>
+          )}
+          <View style={styles.cardActions}>
+            <Pressable
+              onPress={handleDelayedPollTest}
+              style={[styles.primaryButton, delayedTestRunning && styles.buttonDisabled]}
+              disabled={delayedTestRunning}
+            >
+              <Text style={styles.primaryButtonText}>
+                {delayedTestRunning ? '测试运行中...' : '启动延迟测试'}
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -290,5 +463,44 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: colors.stone700,
+  },
+  diagList: {
+    gap: 8,
+  },
+  diagRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  diagLabel: {
+    fontSize: 12,
+    color: colors.stone600,
+  },
+  diagValue: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.stone800,
+  },
+  diagWarning: {
+    color: colors.gold600,
+  },
+  diagError: {
+    color: colors.imperial600,
+  },
+  countdownContainer: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: colors.stone100,
+    alignItems: 'center',
+  },
+  countdownText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.stone700,
+  },
+  buttonDisabled: {
+    opacity: 0.5,
   },
 });

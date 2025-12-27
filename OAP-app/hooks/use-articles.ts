@@ -55,16 +55,23 @@ export function useArticles(token?: string | null) {
     try {
       const dateStr = getTodayDateString();
       const cached = await getCachedArticlesByDate(dateStr);
+      // 先显示缓存（如果有），快速响应
       if (cached) {
         setArticles(cached);
-        return;
       }
+      // 无论是否有缓存，都请求服务器获取最新数据
       const list = await fetchArticles(token);
       setArticles(list);
       await setCachedArticlesByDate(dateStr, list);
       void prefetchArticleDetails(list);
     } catch {
-      setArticles([]);
+      // 如果请求失败且有缓存，保持缓存显示
+      const cached = await getCachedArticlesByDate(getTodayDateString());
+      if (cached) {
+        setArticles(cached);
+      } else {
+        setArticles([]);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -73,18 +80,13 @@ export function useArticles(token?: string | null) {
   const refreshArticles = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      const dateStr = getTodayDateString();
-      const cached = await getCachedArticlesByDate(dateStr);
-      if (cached) {
-        setArticles(cached);
-        return;
-      }
+      // 强制从服务器获取，不使用缓存
       const list = await fetchArticles(token);
       setArticles(list);
-      await setCachedArticlesByDate(dateStr, list);
+      await setCachedArticlesByDate(getTodayDateString(), list);
       void prefetchArticleDetails(list);
     } catch {
-      setArticles([]);
+      // 刷新失败时不改变现有数据
     } finally {
       setIsRefreshing(false);
     }
